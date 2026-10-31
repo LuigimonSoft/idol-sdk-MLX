@@ -57,7 +57,7 @@ def capture():
 
 
 def write_capture(destination):
-    """Write only synthetic tensors, refusing to replace an existing file."""
+    """Write to a trusted caller-selected path without replacing an existing file."""
     payload = save(capture(), metadata={"kind": "synthetic-component-reference", "version": "1"})
     with Path(destination).open("xb") as file:
         file.write(payload)
@@ -65,7 +65,7 @@ def write_capture(destination):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=Path, required=True, help="new safetensors file")
+    parser.add_argument("--output", type=Path, required=True, help="new safetensors file at a trusted local path")
     args = parser.parse_args()
     write_capture(args.output)
     print("Synthetic component reference written.")
