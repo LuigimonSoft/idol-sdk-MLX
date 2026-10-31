@@ -1,0 +1,10 @@
+# macOS metadata in the working tree
+.DS_Store
+._*
+
+# Local Python environments and generated files
+.venv/
+.venv-*/
+__pycache__/
+*.py[cod]
+.pytest_cache/
