@@ -51,7 +51,7 @@ git -C ../idol-sdk-reference rev-parse HEAD
 
 El resultado debe coincidir con el commit indicado. Si la variable no está
 definida, las pruebas se marcan como omitidas; una ejecución omitida no es una
-validación. Una copia incorrecta, inexistente o sin dependencias provoca error.
+validación. Las pruebas no comprueban automáticamente la revisión de la copia; verifícala con el comando anterior. Las dependencias ausentes o una copia inutilizable pueden provocar errores.
 
 ## Siguientes pasos
 
