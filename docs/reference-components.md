@@ -52,8 +52,7 @@ git -C ../idol-sdk-reference rev-parse HEAD
 ```
 
 The result must equal the commit above. If `IDOL_REFERENCE_SOURCE` is not set,
-the tests are explicitly skipped; a skipped run is not validation. A missing or
-incorrect checkout or dependency causes the tests to fail.
+the tests are explicitly skipped; a skipped run is not validation. The tests do not check the checkout revision automatically; verify it using the command above. Missing dependencies or an unusable source may cause the tests to fail.
 
 ## Next steps
 
