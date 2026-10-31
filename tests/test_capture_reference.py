@@ -34,7 +34,10 @@ class CaptureReferenceTests(unittest.TestCase):
 
     def test_captured_weights_reproduce_component_outputs(self):
         torch = self.torch
-        tensors = self.capture_module.capture()
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "reference.safetensors"
+            self.capture_module.write_capture(path)
+            tensors = self.load_file(str(path))
         layers = importlib.import_module("idol.models.layers")
         repo = layers.RePo3DRotaryEmbedding(24, num_heads=2, head_dim=12)
         repo.real_valued = True
@@ -48,6 +51,12 @@ class CaptureReferenceTests(unittest.TestCase):
             output = attention(tensors["attention.input"], rotary)
         torch.testing.assert_close(rotary, tensors["repo.output"])
         torch.testing.assert_close(output, tensors["attention.output"])
+        # Distinct token rotations must affect attention, not cancel globally.
+        identity = torch.zeros_like(rotary)
+        identity[..., 0] = 1
+        with torch.no_grad():
+            unrotated = attention(tensors["attention.input"], identity)
+        self.assertGreater(torch.max(torch.abs(output - unrotated)).item(), 1e-5)
 
 
 if __name__ == "__main__":
