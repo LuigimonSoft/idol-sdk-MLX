@@ -29,8 +29,10 @@ class CaptureReferenceTests(unittest.TestCase):
             self.torch.testing.assert_close(values["camera.output"][:3], self.torch.tensor([0., 0., 2.], dtype=self.torch.float64))
             self.assertIn("repo.weights.final_map.weight", values)
             self.assertIn("attention.weights.qkv.weight", values)
+            before = path.read_bytes()
             with self.assertRaises(FileExistsError):
                 self.capture_module.write_capture(path)
+            self.assertEqual(path.read_bytes(), before)
 
     def test_captured_weights_reproduce_component_outputs(self):
         torch = self.torch
