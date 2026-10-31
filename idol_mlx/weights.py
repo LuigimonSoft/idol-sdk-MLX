@@ -24,6 +24,14 @@ class TensorSpec:
             raise ValueError("TensorSpec.dtype must be a canonical dtype name.")
 
 
+def _validate_schema(expected):
+    if not isinstance(expected, dict) or not expected or any(
+        not isinstance(key, str) or not key or not isinstance(spec, TensorSpec)
+        for key, spec in expected.items()
+    ):
+        raise ValueError("Expected schema must be a non-empty dictionary of names to TensorSpec.")
+
+
 def _read_safetensors(path):
     # Import only when needed, so config and schema validation need no GPU.
     import mlx.core as mx
@@ -40,15 +48,17 @@ def load_weights(path, expected):
     path = Path(path)
     if path.suffix != ".safetensors":
         raise CheckpointError("Checkpoint must be a .safetensors file.")
-    if not isinstance(expected, dict) or not expected or any(
-        not isinstance(key, str) or not key or not isinstance(spec, TensorSpec)
-        for key, spec in expected.items()
-    ):
-        raise ValueError("Expected schema must be a non-empty dictionary of names to TensorSpec.")
+    _validate_schema(expected)
     try:
         tensors = _read_safetensors(path)
     except (OSError, ValueError, RuntimeError) as error:
         raise CheckpointError("Cannot read the safetensors checkpoint.") from error
+    return validate_tensors(tensors, expected)
+
+
+def validate_tensors(tensors, expected):
+    """Validate an in-memory tensor dictionary against a complete schema."""
+    _validate_schema(expected)
     if not isinstance(tensors, dict):
         raise CheckpointError("The checkpoint did not contain a tensor dictionary.")
     missing = sorted(expected.keys() - tensors.keys())
