@@ -1,0 +1,19 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "idol-sdk-mlx"
+version = "0.1.0.dev0"
+description = "Apple Silicon MLX backend for Idol, under development"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+dependencies = ["mlx==0.32.3"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3.13",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["idol_mlx"]
