@@ -19,6 +19,7 @@ indicada a continuación no realiza inferencia.
   MLX que comprueba un esquema de tensores proporcionado explícitamente.
 - Mapeo explícito de nombres en memoria y conversión de disposición para Conv2d
   estándar sin grupos, con validación estricta del esquema de salida.
+- Una política preliminar opcional de precisión y límites de evaluación explícitos.
 - Capturas sintéticas y pruebas de algunos componentes originales, además de
   métricas preliminares de equivalencia numérica.
 
@@ -74,6 +75,7 @@ imágenes privadas ni pesos al repositorio.
 - [Arquitectura MLX propuesta](mlx-architecture.md)
 - [Validación de configuración y checkpoints](config-and-weights.md)
 - [Mapeo preliminar de pesos](weight-mapping.md)
+- [Política de precisión y evaluación diferida](precision-evaluation.md)
 - [Capturas sintéticas de referencia](reference-capture.md)
 - [Métricas y tolerancias provisionales](parity-metrics.md)
 - [Imágenes de prueba reproducibles](test-images.md)
