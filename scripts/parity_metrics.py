@@ -32,6 +32,11 @@ def compare(reference, candidate, *, atol, rtol):
     for value in (ref, actual):
         if not np.issubdtype(value.dtype, np.number) or np.issubdtype(value.dtype, np.complexfloating):
             raise TypeError("tensors must contain real numeric values")
+    # Integers outside this range are not all exactly representable in FP64.
+    for value in (ref, actual):
+        if np.issubdtype(value.dtype, np.integer):
+            if int(value.min()) < -(2**53) or int(value.max()) > 2**53:
+                raise ValueError("integer values must be within the exact FP64 range [-2**53, 2**53]")
     ref = ref.astype(np.float64)
     actual = actual.astype(np.float64)
     finite = np.isfinite(ref) & np.isfinite(actual)
@@ -42,5 +47,9 @@ def compare(reference, candidate, *, atol, rtol):
         allowed = atol + rtol * np.abs(ref)
     matches = np.isfinite(error) & (error <= allowed)
     failures = int((~matches).sum())
-    return ParityResult(failures == 0, True, ref.size, failures,
-                        float(error.max()), float(error.mean()))
+    max_error = float(error.max())
+    if max_error == 0 or not np.isfinite(max_error):
+        mean_error = max_error
+    else:
+        mean_error = float(np.mean(error / max_error) * max_error)
+    return ParityResult(failures == 0, True, ref.size, failures, max_error, mean_error)
