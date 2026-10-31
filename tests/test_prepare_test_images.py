@@ -23,6 +23,19 @@ class FixtureTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "SHA-256 mismatch"):
                 checked_photo("photo.png", hashlib.sha256(b"expected").hexdigest())
 
+    def test_dangling_fixture_symlink_is_rejected_before_downloading(self):
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / "images"
+            output.mkdir()
+            link = output / "synthetic_alpha.png"
+            link.symlink_to(output / "missing.png")
+            with patch("scripts.prepare_test_images.checked_photo") as fetch:
+                with self.assertRaises(FileExistsError):
+                    prepare(output)
+                fetch.assert_not_called()
+            self.assertTrue(link.is_symlink())
+            self.assertEqual([item.name for item in output.iterdir()], [link.name])
+
     def test_prepare_writes_four_images_and_refuses_overwrite(self):
         with tempfile.TemporaryDirectory() as temp:
             output = Path(temp) / "images"
