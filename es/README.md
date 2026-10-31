@@ -17,6 +17,8 @@ indicada a continuación no realiza inferencia.
   el dispositivo predeterminado de MLX.
 - Validación de la configuración común y un cargador local de safetensors con
   MLX que comprueba un esquema de tensores proporcionado explícitamente.
+- Mapeo explícito de nombres en memoria y conversión de disposición para Conv2d
+  estándar sin grupos, con validación estricta del esquema de salida.
 - Capturas sintéticas y pruebas de algunos componentes originales, además de
   métricas preliminares de equivalencia numérica.
 
@@ -71,6 +73,7 @@ imágenes privadas ni pesos al repositorio.
 - [Arquitectura y tensores del original](architecture.md)
 - [Arquitectura MLX propuesta](mlx-architecture.md)
 - [Validación de configuración y checkpoints](config-and-weights.md)
+- [Mapeo preliminar de pesos](weight-mapping.md)
 - [Capturas sintéticas de referencia](reference-capture.md)
 - [Métricas y tolerancias provisionales](parity-metrics.md)
 - [Imágenes de prueba reproducibles](test-images.md)
