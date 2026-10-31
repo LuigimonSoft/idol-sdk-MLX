@@ -21,7 +21,9 @@ Use absolute tolerance near zero and relative tolerance for larger values.
 The helper in `scripts/parity_metrics.py` also reports maximum and mean
 absolute error, the total number of elements and the number outside tolerance.
 It casts real numeric arrays to FP64 for the calculation. This cannot recover
-precision already lost in the input tensors.
+precision already lost in the input tensors. Integer values outside the guaranteed
+exact FP64 range [-2**53, 2**53] are rejected before conversion. Mean error is
+computed with scaling to avoid overflow when individual errors are finite.
 
 Shape mismatch, empty arrays, invalid tolerances and non-real or non-numeric
 inputs are rejected. Any NaN or infinity fails even if both inputs contain the
