@@ -17,6 +17,8 @@ condiciones del modelo y del componente para el uso y la distribución previstos
 La ficha de FLUX.2 dev indica una licencia no comercial; verifica los derechos
 comerciales y de producción directamente con el titular.
 
+La licencia DINOv3 también incluye condiciones de redistribución y una restricción sobre ingeniería inversa. Revisa la licencia antes de implementar o distribuir una adaptación; este inventario no determina cómo se aplican esas disposiciones al proyecto.
+
 ## Archivos comprobados
 
 El SDK original solicita `config.json`, `denoiser.safetensors`,
