@@ -1,0 +1,78 @@
+# Idol SDK para MLX
+
+Adaptación en desarrollo para Apple Silicon de [Idol SDK](https://github.com/speridlabs/idol-sdk),
+que convierte una imagen en un objeto 3D de Gaussian splatting.
+
+**Estado: desarrollo inicial.** El pipeline MLX de imagen a 3D, la conversión
+de modelos y la generación PLY todavía no están implementados. La instalación
+indicada a continuación no realiza inferencia.
+
+[English](../README.md)
+
+## Disponible actualmente
+
+- Una base instalable del paquete `idol_mlx` para la configuración probada de
+  Python 3.13 y MLX 0.32.3.
+- Un diagnóstico de Metal que prueba una operación pequeña en GPU sin cambiar
+  el dispositivo predeterminado de MLX.
+- Validación de la configuración común y un cargador local de safetensors con
+  MLX que comprueba un esquema de tensores proporcionado explícitamente.
+- Capturas sintéticas y pruebas de algunos componentes originales, además de
+  métricas preliminares de equivalencia numérica.
+
+Faltan los esquemas de checkpoints de cada modelo, la conversión de pesos, los
+encoders, el DiT, los decodificadores y la inferencia completa.
+
+## Instalación
+
+En Apple Silicon, con CPython 3.13.14 y
+[uv](https://docs.astral.sh/uv/) disponibles:
+
+```sh
+uv venv --python 3.13.14 .venv-mlx
+uv pip install --python .venv-mlx/bin/python -e .
+.venv-mlx/bin/python -c "import idol_mlx; print(idol_mlx.__version__)"
+```
+
+Comprueba Metal por separado:
+
+```sh
+.venv-mlx/bin/python -c "from idol_mlx.device import require_metal; require_metal(); print('Metal check passed')"
+```
+
+Consulta la [instalación del paquete MLX](mlx-package.md) y el
+[diagnóstico de Metal](metal-diagnostics.md). Metal puede no estar disponible
+en sesiones restringidas o sin interfaz gráfica aunque el equipo sea compatible.
+
+## Pruebas y acceso a modelos
+
+La suite completa usa un entorno de referencia independiente y una copia del
+SDK original fijada a un commit. Sigue
+[entornos de desarrollo](environments.md) y
+[pruebas de componentes de referencia](reference-components.md) antes de
+ejecutar:
+
+```sh
+IDOL_REFERENCE_SOURCE=../idol-sdk-reference .venv-reference/bin/python -m unittest discover -s tests -v
+```
+
+Si `IDOL_REFERENCE_SOURCE` no está definido, se omiten las pruebas que
+dependen del SDK original; una ejecución con pruebas omitidas no constituye una
+validación completa. Las pruebas actuales no demuestran inferencia completa ni
+equivalencia PyTorch/MLX.
+
+La futura inferencia completa requiere acceso aprobado a DINOv3 y FLUX.2 dev y
+el cumplimiento de sus licencias respectivas. Consulta
+[acceso y licencias de modelos](model-access.md). No subas credenciales,
+imágenes privadas ni pesos al repositorio.
+
+## Documentación
+
+- [Arquitectura y tensores del original](architecture.md)
+- [Arquitectura MLX propuesta](mlx-architecture.md)
+- [Validación de configuración y checkpoints](config-and-weights.md)
+- [Capturas sintéticas de referencia](reference-capture.md)
+- [Métricas y tolerancias provisionales](parity-metrics.md)
+- [Imágenes de prueba reproducibles](test-images.md)
+- [CI y SonarCloud](ci-sonarcloud.md)
+- [Límite de confianza de rutas de salida](output-path-security.md)
