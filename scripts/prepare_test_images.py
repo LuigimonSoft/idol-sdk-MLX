@@ -2,6 +2,7 @@
 
 import argparse
 import hashlib
+import os
 from io import BytesIO
 from pathlib import Path
 from urllib.request import urlopen
@@ -38,9 +39,10 @@ def synthetic_images():
 
 
 def prepare(output):
+    """Write fixtures into a directory chosen by a trusted local caller."""
     output = Path(output)
     names = [*PHOTOS, "synthetic_opaque.png", "synthetic_alpha.png"]
-    if any((output / name).exists() for name in names):
+    if any(os.path.lexists(output / name) for name in names):
         raise FileExistsError("Output already contains a fixture; use an empty directory")
     photos = {name: checked_photo(name, digest) for name, digest in PHOTOS.items()}
     images = {}
@@ -57,7 +59,7 @@ def prepare(output):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True,
-                        help="empty destination directory outside the repository")
+                        help="trusted empty destination directory outside the repository")
     args = parser.parse_args()
     prepare(args.output)
     print(f"Prepared {len(PHOTOS) + 2} test images.")
