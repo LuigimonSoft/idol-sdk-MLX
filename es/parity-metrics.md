@@ -21,7 +21,9 @@ Usa tolerancia absoluta cerca de cero y relativa para valores mayores. La
 utilidad `scripts/parity_metrics.py` informa además el error absoluto máximo y
 medio, el número total de elementos y los que quedan fuera de tolerancia.
 Convierte tensores numéricos reales a FP64 para calcular, pero no recupera la
-precisión perdida anteriormente.
+precisión perdida anteriormente. Se rechazan los enteros fuera del intervalo
+exacto garantizado de FP64 [-2**53, 2**53] antes de convertirlos. El error medio
+se calcula con escalado para evitar desbordamiento si cada error es finito.
 
 Se rechazan formas distintas, arreglos vacíos, tolerancias inválidas y entradas
 no numéricas o complejas. Cualquier NaN o infinito falla, aunque aparezca igual
