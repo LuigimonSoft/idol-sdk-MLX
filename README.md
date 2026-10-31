@@ -19,6 +19,7 @@ below to perform inference.
   that checks an explicitly supplied tensor schema.
 - Explicit in-memory tensor name mapping and standard ungrouped Conv2d layout
   conversion, with strict output-schema validation.
+- An opt-in preliminary precision and explicit evaluation-boundary policy.
 - Synthetic reference captures and tests for selected upstream components,
   plus preliminary numerical parity metrics.
 
@@ -72,6 +73,7 @@ private images or model weights.
 - [Proposed MLX architecture](docs/mlx-architecture.md)
 - [Configuration and checkpoint validation](docs/config-and-weights.md)
 - [Preliminary weight mapping](docs/weight-mapping.md)
+- [Precision and lazy evaluation policy](docs/precision-evaluation.md)
 - [Synthetic reference captures](docs/reference-capture.md)
 - [Parity metrics and provisional tolerances](docs/parity-metrics.md)
 - [Reproducible test images](docs/test-images.md)
