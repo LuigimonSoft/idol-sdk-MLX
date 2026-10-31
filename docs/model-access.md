@@ -17,6 +17,8 @@ interchangeable. Review the model and component terms for the intended use and
 distribution. The model card lists a non-commercial license for FLUX.2 dev;
 verify commercial and production rights directly with the rights holder.
 
+The DINOv3 license also includes redistribution conditions and a restriction on reverse engineering. Review the actual license before implementing or distributing an adaptation; this inventory does not determine how those provisions apply to this project.
+
 ## Files checked
 
 The original SDK requests these files from Idol: `config.json`,
