@@ -467,3 +467,72 @@ class RotaryAttentionParityTests(unittest.TestCase):
                     np.testing.assert_allclose(np.array(actual_identity).astype(np.float32), ref_identity,
                                                rtol=1e-4 if dtype == "float32" else 3e-3,
                                                atol=1e-5 if dtype == "float32" else 3e-3)
+
+
+@unittest.skipUnless(importlib.util.find_spec("mlx") and os.environ.get("IDOL_REFERENCE_SOURCE"),
+                     "MLX and pinned reference source are required")
+class UnifiedTransformerParityTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import mlx.core as mx
+        import numpy as np
+        import torch
+        from mlx.utils import tree_flatten
+        from idol_mlx.layers import UnifiedTransformerBlock
+
+        sys.path.insert(0, str(Path(os.environ["IDOL_REFERENCE_SOURCE"]).resolve()))
+        from idol.models.layers import UnifiedTransformerBlock as TorchBlock
+
+        cls.mx, cls.np, cls.torch = mx, np, torch
+        cls.tree_flatten = staticmethod(tree_flatten)
+        cls.mlx_block, cls.torch_block = UnifiedTransformerBlock, TorchBlock
+        cls.previous_device = mx.default_device()
+        device = os.environ.get("IDOL_TEST_MLX_DEVICE", "cpu")
+        if device not in ("cpu", "gpu"):
+            raise ValueError("IDOL_TEST_MLX_DEVICE must be cpu or gpu")
+        mx.set_default_device(mx.gpu if device == "gpu" else mx.cpu)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.mx.set_default_device(cls.previous_device)
+
+    def test_unified_block_with_and_without_modulation(self):
+        mx, np, torch = self.mx, self.np, self.torch
+        rng = np.random.default_rng(149)
+        values = rng.normal(size=(2, 3, 12)).astype(np.float32)
+        angles = rng.uniform(-2, 2, size=(2, 3, 2, 3)).astype(np.float32)
+        rotary = np.stack([np.cos(angles), np.sin(angles)], axis=-1)
+        mod = rng.normal(scale=0.3, size=(2, 72)).astype(np.float32)
+        for modulation in (False, True):
+            with self.subTest(modulation=modulation):
+                torch.manual_seed(31)
+                ref = self.torch_block(12, 2, mlp_ratio=1.5, modulation=modulation).eval()
+                if modulation:
+                    with torch.no_grad():
+                        ref.shift_table.copy_(torch.linspace(-0.2, 0.2, 72).reshape(1, 72))
+                candidate = self.mlx_block(12, 2, mlp_ratio=1.5, modulation=modulation)
+                target = dict(self.tree_flatten(candidate.parameters()))
+                mapped = {}
+                for name, param in ref.named_parameters():
+                    mlx_name = name.replace("mlp.mlp.", "mlp.mlp.layers.")
+                    self.assertIn(mlx_name, target)
+                    self.assertEqual(tuple(target[mlx_name].shape), tuple(param.shape))
+                    mapped[mlx_name] = mx.array(param.detach().numpy())
+                self.assertEqual(set(mapped), set(target))
+                candidate.load_weights(list(mapped.items()), strict=True)
+                input_t = torch.from_numpy(values)
+                mod_t = torch.from_numpy(mod) if modulation else None
+                mod_m = mx.array(mod) if modulation else None
+                actual = candidate(mx.array(values), mod_m, mx.array(rotary))
+                expected = ref(input_t, mod_t, torch.from_numpy(rotary)).detach().numpy()
+                mx.eval(actual)
+                self.assertEqual(tuple(actual.shape), values.shape)
+                np.testing.assert_allclose(np.array(actual), expected, rtol=1e-4, atol=1e-5)
+                if modulation:
+                    zero_mod = -ref.shift_table.detach().expand(2, -1)
+                    identity = ref(input_t, zero_mod, torch.from_numpy(rotary)).detach().numpy()
+                    np.testing.assert_array_equal(identity, values)
+                    self.assertGreater(float(np.max(np.abs(expected - identity))), 1e-3)
+                    mlx_identity = candidate(mx.array(values), mx.array(zero_mod.numpy()), mx.array(rotary))
+                    mx.eval(mlx_identity)
+                    np.testing.assert_array_equal(np.array(mlx_identity), values)
