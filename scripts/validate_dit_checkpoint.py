@@ -4,6 +4,7 @@ import argparse
 from dataclasses import asdict
 import json
 import math
+import numbers
 from pathlib import Path
 import sys
 
@@ -22,8 +23,8 @@ from scripts.parity_metrics import compare
 
 
 def compare_checkpoint(config_path, checkpoint_path, *, tokens=8, context_tokens=4,
-                       atol=2e-5, rtol=2e-4):
-    """Return metrics for fixed synthetic inputs with a shortened latent sequence.
+                       seed=2026, timestep=500.0, atol=2e-5, rtol=2e-4):
+    """Return metrics for seeded synthetic inputs with a shortened latent sequence.
 
     The complete checkpoint is loaded strictly before cropping positional tokens.
     Only local trusted inputs are accepted; neither checkpoint nor generated
@@ -35,6 +36,11 @@ def compare_checkpoint(config_path, checkpoint_path, *, tokens=8, context_tokens
         raise ValueError("tokens must be between 1 and q_token_length.")
     if isinstance(context_tokens, bool) or not isinstance(context_tokens, int) or context_tokens < 1:
         raise ValueError("context_tokens must be a positive integer.")
+    if isinstance(seed, bool) or not isinstance(seed, int) or not 0 <= seed < 2**64:
+        raise ValueError("seed must be an unsigned 64-bit integer.")
+    if (isinstance(timestep, bool) or not isinstance(timestep, numbers.Real) or
+            not math.isfinite(timestep) or not 0 <= timestep <= 1000):
+        raise ValueError("timestep must be finite and between 0 and 1000.")
     # Meta construction avoids allocating random full-size reference parameters.
     with torch.device("meta"):
         reference = TorchModel(**config)
@@ -50,12 +56,12 @@ def compare_checkpoint(config_path, checkpoint_path, *, tokens=8, context_tokens
     load_dit_checkpoint(candidate, checkpoint_path)
     reference.pos_pe = reference.pos_pe[:, :tokens, :]
     candidate.pos_pe = candidate.pos_pe[:, :tokens, :]
-    generator = np.random.default_rng(2026)
+    generator = np.random.default_rng(seed)
     latent = generator.standard_normal((1, tokens, config["in_channels"])).astype(np.float32)
     camera = generator.standard_normal((1, 1, config["cam_channels"])).astype(np.float32)
     feature1 = generator.standard_normal((1, context_tokens, config["cond_channels"])).astype(np.float32)
     feature2 = generator.standard_normal((1, context_tokens, config["cond2_channels"])).astype(np.float32)
-    time = np.array([500.0], dtype=np.float32)
+    time = np.array([timestep], dtype=np.float32)
     x_t = TensorDict({"latent": torch.from_numpy(latent), "camera": torch.from_numpy(camera)}, batch_size=[1])
     cond_t = TensorDict({"feature1": torch.from_numpy(feature1), "feature2": torch.from_numpy(feature2)},
                         batch_size=[1])
@@ -89,7 +95,8 @@ def compare_checkpoint(config_path, checkpoint_path, *, tokens=8, context_tokens
                                            atol=atol, rtol=rtol))
         comparisons[f"{name}_shared_frequencies"] = asdict(
             compare(expected[name].detach().numpy(), np.array(shared_actual[name]), atol=atol, rtol=rtol))
-    return {"tokens": tokens, "context_tokens": context_tokens, "dtype": "float32",
+    return {"tokens": tokens, "context_tokens": context_tokens, "seed": seed,
+            "timestep": float(timestep), "dtype": "float32",
             "mlx_device": str(mx.default_device()), "atol": atol, "rtol": rtol,
             "comparisons": comparisons}
 
@@ -100,13 +107,16 @@ def main(argv=None):
     parser.add_argument("--checkpoint", required=True, type=Path, help="trusted local FP32 denoiser safetensors")
     parser.add_argument("--tokens", type=int, default=8)
     parser.add_argument("--context-tokens", type=int, default=4)
+    parser.add_argument("--seed", type=int, default=2026)
+    parser.add_argument("--timestep", type=float, default=500.0)
     parser.add_argument("--atol", type=float, default=2e-5)
     parser.add_argument("--rtol", type=float, default=2e-4)
     parser.add_argument("--device", choices=("cpu", "gpu"), default="gpu")
     args = parser.parse_args(argv)
     mx.set_default_device(mx.gpu if args.device == "gpu" else mx.cpu)
     report = compare_checkpoint(args.config, args.checkpoint, tokens=args.tokens,
-                                context_tokens=args.context_tokens, atol=args.atol, rtol=args.rtol)
+                                context_tokens=args.context_tokens, seed=args.seed, timestep=args.timestep,
+                                atol=args.atol, rtol=args.rtol)
     print(json.dumps(report, allow_nan=False))
     return 0 if all(value["passed"] for value in report["comparisons"].values()) else 1
 

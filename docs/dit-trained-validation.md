@@ -51,6 +51,28 @@ calculation and are not covered by this trained-checkpoint result. The
 provisional tolerances were not increased. Disabling `MLX_ENABLE_TF32` did not
 change the original GPU output errors in this case.
 
+## Additional reduced scenarios
+
+The same checkpoint and environment were also checked with three deterministic
+synthetic inputs on each MLX device. The tolerances were unchanged, and all six
+comparisons passed for every scenario. The table gives the maximum absolute
+errors for the native denoiser outputs; passing also depends on relative error.
+
+| Device | Latent tokens | Context tokens | Seed | Timestep | Latent max error | Camera max error |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| CPU | 8 | 4 | 0 | 0 | 3.77465e-6 | 2.65241e-5 |
+| CPU | 32 | 8 | 42 | 250 | 4.05312e-6 | 9.20892e-6 |
+| CPU | 64 | 16 | 123 | 1000 | 1.97887e-5 | 1.07288e-5 |
+| Metal GPU | 8 | 4 | 0 | 0 | 2.86102e-6 | 2.87294e-5 |
+| Metal GPU | 32 | 8 | 42 | 250 | 4.05312e-6 | 1.44541e-5 |
+| Metal GPU | 64 | 16 | 123 | 1000 | 2.49147e-5 | 1.74046e-5 |
+
+All cases use batch 1 and crop the first positions from the checkpoint. These
+are independent forwards, not a sampler trajectory. They do not validate the
+8192-token model, mixed precision, other checkpoints, or end-to-end inference.
+The random generator is NumPy's `default_rng`; its seed reproduces the inputs
+for a fixed NumPy version, shapes, and generation order.
+
 ## Reproduce
 
 Install MLX and the pinned reference dependencies in one environment. Obtain
@@ -62,8 +84,9 @@ PYTHONPATH=../idol-sdk-reference .venv-reference/bin/python -m scripts.validate_
   --config /trusted/path/config.json --checkpoint /trusted/path/denoiser.safetensors --device gpu
 ```
 
-Use `--device cpu` for MLX CPU, and `--tokens` or `--context-tokens` to select
-reduced lengths. The JSON output contains only aggregate comparison metrics;
+Use `--device cpu` for MLX CPU, `--tokens` or `--context-tokens` to select
+reduced lengths, `--seed` for an unsigned 64-bit seed, and `--timestep` for a
+finite value from 0 to 1000. Defaults remain seed 2026 and timestep 500. The JSON output contains only aggregate comparison metrics;
 exit 0 means all six comparisons pass, exit 1 means at least one comparison
 fails. The tool loads the full model/checkpoint, so it needs sufficient memory.
 It does not write weights or inputs. The automated test uses a tiny synthetic
