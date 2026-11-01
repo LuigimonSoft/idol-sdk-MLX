@@ -28,7 +28,7 @@ below to perform inference.
 - A preliminary Euler sampler with optional classifier-free guidance and synthetic parity checks.
 - Explicit seeded MLX noise generation and per-step synthetic trajectory checks.
 - A preliminary FP32 denoiser and strict checkpoint mapping. A reduced
-  trained-weight diagnostic currently fails provisional numerical tolerances.
+  trained-weight diagnostic passes provisional tolerances for one reduced FP32 input.
 - A preliminary file-based parity comparison tool with explicit tolerances.
 - Synthetic reference captures and tests for selected upstream components,
   plus preliminary numerical parity metrics.
@@ -73,7 +73,7 @@ If `IDOL_REFERENCE_SOURCE` is not set, reference-dependent tests are skipped;
 a skipped run is not full validation. The current tests do not prove full-model
 inference or PyTorch/MLX parity. A [reduced trained-checkpoint diagnostic](docs/dit-trained-validation.md)
 compares denoiser outputs with both native and reference-derived position
-frequencies; the native path does not yet meet the provisional tolerances.
+frequencies; both paths pass for the recorded reduced FP32 input.
 
 Future full inference requires approved access to DINOv3 and FLUX.2 dev and
 compliance with their separate licenses. See

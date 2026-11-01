@@ -2,7 +2,8 @@
 
 [Español](../es/dit-trained-validation.md)
 
-This is a diagnostic for issue #24, **not a passed parity validation**. The
+This diagnostic addresses issue #24; it does not validate general or full-size
+parity. The
 checkpoint `denoiser.safetensors` and configuration from
 [`speridlabs/idol` revision `2731c2291fc65a797c5cb627a5e5526fc1490902`](https://huggingface.co/speridlabs/idol/tree/2731c2291fc65a797c5cb627a5e5526fc1490902)
 were downloaded to a temporary local directory. The checkpoint contains 560
@@ -13,8 +14,9 @@ precision. Both models then used only the first eight `pos_pe` positions and
 identical synthetic inputs: batch 1, eight latent tokens, four condition tokens,
 and time 500. This reduced sequence does not validate the full 8192-token run.
 
-On an Apple M4 with 32 GB unified memory, macOS 27.2, MLX 0.32.3 and PyTorch
-2.15.0, using provisional `atol=2e-5, rtol=2e-4`:
+Before the canonical-frequency correction, on an Apple M4 with 32 GB unified
+memory, macOS 27.2, MLX 0.32.3 and PyTorch 2.15.0, using provisional
+`atol=2e-5, rtol=2e-4`:
 
 | MLX device | Position max absolute error | Latent max absolute error | Camera max absolute error | Result |
 | --- | ---: | ---: | ---: | --- |
@@ -36,13 +38,18 @@ For the same reduced input and tolerances, its trained-checkpoint output was:
 | CPU | 1.19209e-7 | 7.33137e-6 | 1.49012e-5 | Pass |
 | Metal GPU | 1.78814e-7 | 5.12600e-6 | 1.10269e-5 | Pass |
 
-These additional measurements used Python 3.12 in a temporary diagnostic
-environment (the package supports Python 3.13), with the same MLX and PyTorch
-versions. They show the effect for this one reduced FP32 input; they do not
-establish general parity or provide a PyTorch-free production solution. The
-normal MLX path still fails. Disabling `MLX_ENABLE_TF32` did not change the
-original GPU output errors in this case. Investigating and correcting numerical differences remains work;
-tolerances have not been increased to make the result pass.
+The native MLX path now uses the canonical, configuration-derived FP32
+frequencies documented in [spatial embeddings](spatial-embeddings.md). It
+requires no PyTorch at inference. Repeating this reduced comparison after the
+correction produced the same errors and passes shown in the shared-frequency
+table above, on both CPU and Metal; all six diagnostic comparisons passed.
+These measurements used Python 3.12 in a temporary diagnostic environment
+(the package supports Python 3.13), with the same MLX and PyTorch versions.
+They do not establish general parity, full-size memory requirements, or
+end-to-end inference. Other frequency configurations still use the general MLX
+calculation and are not covered by this trained-checkpoint result. The
+provisional tolerances were not increased. Disabling `MLX_ENABLE_TF32` did not
+change the original GPU output errors in this case.
 
 ## Reproduce
 

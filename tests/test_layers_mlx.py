@@ -233,6 +233,22 @@ class SpatialEmbeddingParityTests(unittest.TestCase):
                     self.assertEqual(actual.dtype, mx.float32)
                     np.testing.assert_allclose(np.array(actual), expected, rtol=1e-4, atol=1e-5)
 
+    def test_canonical_denoiser_frequencies_and_positions(self):
+        from idol_mlx._position_frequencies import CANONICAL_POSITION_FREQUENCIES
+
+        mx, np, torch = self.mx, self.np, self.torch
+        reference = self.torch_v1(1024)
+        frequencies = mx.array(CANONICAL_POSITION_FREQUENCIES, dtype=mx.float32)
+        mx.eval(frequencies)
+        np.testing.assert_array_equal(np.array(frequencies), reference.freqs.numpy())
+        # Include high-frequency phases and non-binary fractions that expose
+        # small changes to the schedule after sine/cosine evaluation.
+        values = np.array([[[0.1, -0.3, 0.77], [0.91, 0.001, -0.8125]]], dtype=np.float32)
+        expected = reference(torch.from_numpy(values)).detach().numpy()
+        actual = self.mlx_v1(1024)(mx.array(values))
+        mx.eval(actual)
+        np.testing.assert_allclose(np.array(actual), expected, rtol=2e-4, atol=2e-5)
+
     def test_decoder_positions_across_padding_and_input_dtypes(self):
         mx, np, torch = self.mx, self.np, self.torch
         values = np.array([[0., 0.25, 1.], [0.125, 0.5, 0.75]], dtype=np.float32)

@@ -12,9 +12,15 @@ Los dos embeddings de coordenadas de `idol_mlx.layers` reproducen el
   frecuencias logarítmicas del decodificador y el tipo de entrada.
 
 Ambos concatenan seno y coseno en el orden original y rellenan con ceros hasta
-el número de canales solicitado cuando es necesario. Las frecuencias se calculan
-según la configuración en cada llamada; no se agregan parámetros entrenables ni
-carga de checkpoints.
+el número de canales solicitado cuando es necesario. Para `freq_dim=170,
+max_res=16`, se usa una constante FP32 canónica generada con el embedding del
+SDK original fijado en PyTorch 2.15.0 CPU; no contiene datos del checkpoint.
+Evita diferencias de redondeo entre backends amplificadas por la trigonometría
+de alta frecuencia. Otras configuraciones usan el cálculo general de MLX. No
+se agregan parámetros entrenables, dependencia de PyTorch para inferencia ni
+carga de checkpoints. Los valores se reproducen con
+`PcdAbsolutePositionEmbedder(1024, in_channels=3, max_res=16).freqs` en el
+entorno de referencia fijado; la prueba compara cada valor de forma exacta.
 
 Las pruebas sintéticas de paridad usan las mismas coordenadas en PyTorch y MLX.
 V1 cubre lotes con varios tokens, relleno, frecuencias extendidas y entradas
