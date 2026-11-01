@@ -16,18 +16,24 @@ el número de canales solicitado cuando es necesario. Para `freq_dim=170,
 max_res=16`, se usa una constante FP32 canónica generada con el embedding del
 SDK original fijado en PyTorch 2.15.0 CPU; no contiene datos del checkpoint.
 Evita diferencias de redondeo entre backends amplificadas por la trigonometría
-de alta frecuencia. Otras configuraciones usan el cálculo general de MLX. No
+de alta frecuencia. Otras configuraciones de V1 usan el cálculo general de MLX. No
 se agregan parámetros entrenables, dependencia de PyTorch para inferencia ni
 carga de checkpoints. Los valores se reproducen con
 `PcdAbsolutePositionEmbedder(1024, in_channels=3, max_res=16).freqs` en el
 entorno de referencia fijado; la prueba compara cada valor de forma exacta.
+Para V2 con `freq_dim=170,
+max_res=10`, las frecuencias canónicas del decoder se generan igualmente con
+`PcdAbsolutePositionEmbedderv2(1024, in_channels=3, max_res=10).freqs` y se
+convierten al tipo de entrada como en la referencia; otras configuraciones V2
+usan el cálculo general de MLX. El decoder gaussiano también
+usa V2; este cambio no valida la paridad de esa red completa.
 
 Las pruebas sintéticas de paridad usan las mismas coordenadas en PyTorch y MLX.
 V1 cubre lotes con varios tokens, relleno, frecuencias extendidas y entradas
 FP32/FP16, con `atol=1e-5, rtol=1e-4`. V2 cubre varias muestras, relleno, exponentes fraccionarios de frecuencias
 intermedias y entradas FP32/FP16; FP32 usa las mismas tolerancias y FP16 usa `atol=3e-3,
 rtol=3e-3`. Estos casos y tolerancias provisionales no validan BF16, todas las
-formas, modelos entrenados ni el pipeline completo.
+formas, todos los modelos entrenados ni el pipeline completo.
 
 Con MLX, PyTorch y el código original fijado disponibles:
 

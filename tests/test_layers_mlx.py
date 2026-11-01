@@ -249,6 +249,24 @@ class SpatialEmbeddingParityTests(unittest.TestCase):
         mx.eval(actual)
         np.testing.assert_allclose(np.array(actual), expected, rtol=2e-4, atol=2e-5)
 
+    def test_canonical_decoder_frequencies_and_positions(self):
+        from idol_mlx._decoder_position_frequencies import CANONICAL_DECODER_POSITION_FREQUENCIES
+
+        mx, np, torch = self.mx, self.np, self.torch
+        reference = self.torch_v2(1024)
+        frequencies = mx.array(CANONICAL_DECODER_POSITION_FREQUENCIES, dtype=mx.float32)
+        mx.eval(frequencies)
+        np.testing.assert_array_equal(np.array(frequencies), reference.freqs.numpy())
+        values = np.array([[0.1, 0.31, 0.77], [0.91, 0.001, 0.8125]], dtype=np.float32)
+        for dtype, tolerance in (("float32", 2e-5), ("float16", 3e-3)):
+            with self.subTest(dtype=dtype):
+                expected = reference(torch.from_numpy(values).to(getattr(torch, dtype))).detach().float().numpy()
+                actual = self.mlx_v2(1024)(mx.array(values).astype(getattr(mx, dtype)))
+                mx.eval(actual)
+                self.assertEqual(actual.dtype, getattr(mx, dtype))
+                np.testing.assert_allclose(np.array(actual).astype(np.float32), expected,
+                                           rtol=2e-4 if dtype == "float32" else 3e-3, atol=tolerance)
+
     def test_decoder_positions_across_padding_and_input_dtypes(self):
         mx, np, torch = self.mx, self.np, self.torch
         values = np.array([[0., 0.25, 1.], [0.125, 0.5, 0.75]], dtype=np.float32)
