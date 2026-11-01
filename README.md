@@ -21,7 +21,7 @@ below to perform inference.
   conversion, with strict output-schema validation.
 - An opt-in preliminary precision and explicit evaluation-boundary policy.
 - Selected MLX normalization, feed-forward and sinusoidal scalar embedding
-  layers with synthetic PyTorch parity checks.
+  layers plus spatial embeddings with synthetic PyTorch parity checks.
 - A preliminary file-based parity comparison tool with explicit tolerances.
 - Synthetic reference captures and tests for selected upstream components,
   plus preliminary numerical parity metrics.
@@ -80,6 +80,7 @@ private images or model weights.
 - [MLX normalization layers](docs/normalization-layers.md)
 - [MLX feed-forward layers](docs/feedforward-layers.md)
 - [Sinusoidal scalar embedding](docs/sinusoidal-embedding.md)
+- [Spatial embeddings](docs/spatial-embeddings.md)
 - [Synthetic reference captures](docs/reference-capture.md)
 - [Parity metrics and provisional tolerances](docs/parity-metrics.md)
 - [Comparing backend outputs](docs/parity-harness.md)
