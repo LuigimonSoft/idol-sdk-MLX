@@ -7,21 +7,22 @@ import math
 from pathlib import Path
 import sys
 
-from safetensors import SafetensorError
-from safetensors.numpy import load_file
+from safetensors import SafetensorError, safe_open
 
 from scripts.parity_metrics import compare
 
 
 def compare_files(reference_path, candidate_path, *, reference_key, candidate_key, atol, rtol):
     """Load paired tensors and return comparison metrics using explicit tolerances."""
-    reference = load_file(str(reference_path))
-    candidate = load_file(str(candidate_path))
-    if reference_key not in reference:
-        raise ValueError(f"Reference tensor not found: {reference_key}")
-    if candidate_key not in candidate:
-        raise ValueError(f"Candidate tensor not found: {candidate_key}")
-    return compare(reference[reference_key], candidate[candidate_key], atol=atol, rtol=rtol)
+    with safe_open(str(reference_path), framework="numpy") as reference:
+        if reference_key not in reference.keys():
+            raise ValueError(f"Reference tensor not found: {reference_key}")
+        reference_tensor = reference.get_tensor(reference_key)
+    with safe_open(str(candidate_path), framework="numpy") as candidate:
+        if candidate_key not in candidate.keys():
+            raise ValueError(f"Candidate tensor not found: {candidate_key}")
+        candidate_tensor = candidate.get_tensor(candidate_key)
+    return compare(reference_tensor, candidate_tensor, atol=atol, rtol=rtol)
 
 
 def main(argv=None):
