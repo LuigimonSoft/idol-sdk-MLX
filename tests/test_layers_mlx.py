@@ -324,3 +324,74 @@ class RotaryParityTests(unittest.TestCase):
                 mx.eval(actual)
                 self.assertEqual(tuple(actual.shape), tuple(expected.shape))
                 np.testing.assert_allclose(np.array(actual), expected, rtol=1e-4, atol=1e-5)
+
+
+@unittest.skipUnless(importlib.util.find_spec("mlx") and os.environ.get("IDOL_REFERENCE_SOURCE"),
+                     "MLX and pinned reference source are required")
+class DecoderAttentionParityTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import mlx.core as mx
+        import numpy as np
+        import torch
+        from idol_mlx.layers import MultiHeadAttention
+
+        sys.path.insert(0, str(Path(os.environ["IDOL_REFERENCE_SOURCE"]).resolve()))
+        from idol.models.layers import MultiHeadAttention as TorchAttention
+
+        cls.mx, cls.np, cls.torch = mx, np, torch
+        cls.mlx_attention, cls.torch_attention = MultiHeadAttention, TorchAttention
+        cls.previous_device = mx.default_device()
+        device = os.environ.get("IDOL_TEST_MLX_DEVICE", "cpu")
+        if device not in ("cpu", "gpu"):
+            raise ValueError("IDOL_TEST_MLX_DEVICE must be cpu or gpu")
+        mx.set_default_device(mx.gpu if device == "gpu" else mx.cpu)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.mx.set_default_device(cls.previous_device)
+
+    def test_self_and_cross_attention_with_shared_parameters(self):
+        mx, np, torch = self.mx, self.np, self.torch
+        rng = np.random.default_rng(907)
+        values = rng.normal(size=(2, 3, 8)).astype(np.float32)
+        context = rng.normal(size=(2, 5, 6)).astype(np.float32)
+        for cross in (False, True):
+            for dtype in ("float32", "float16"):
+                with self.subTest(cross=cross, dtype=dtype):
+                    torch.manual_seed(79)
+                    ref = self.torch_attention(8, 2, ctx_channels=6, cross=cross).eval().to(getattr(torch, dtype))
+                    model = self.mlx_attention(8, 2, ctx_channels=6, cross=cross)
+                    with torch.no_grad():
+                        ref.q_rms_norm.gamma.copy_(torch.linspace(0.5, 1.2, 8).reshape(2, 4))
+                        ref.k_rms_norm.gamma.copy_(torch.linspace(1.3, 0.7, 8).reshape(2, 4))
+                    for name in (("to_q", "to_kv", "to_out") if cross else ("to_qkv", "to_out")):
+                        source, target = getattr(ref, name), getattr(model, name)
+                        for param in ("weight", "bias"):
+                            value = getattr(source, param)
+                            self.assertEqual(tuple(getattr(target, param).shape), tuple(value.shape))
+                            setattr(target, param, mx.array(value.detach().float().numpy()).astype(getattr(mx, dtype)))
+                    for name in ("q_rms_norm", "k_rms_norm"):
+                        source, target = getattr(ref, name), getattr(model, name)
+                        self.assertEqual(tuple(target.gamma.shape), tuple(source.gamma.shape))
+                        target.gamma = mx.array(source.gamma.detach().float().numpy()).astype(getattr(mx, dtype))
+                    input_t = torch.from_numpy(values).to(getattr(torch, dtype))
+                    ctx_t = torch.from_numpy(context).to(getattr(torch, dtype)) if cross else None
+                    input_m = mx.array(values).astype(getattr(mx, dtype))
+                    ctx_m = mx.array(context).astype(getattr(mx, dtype)) if cross else None
+                    actual = model(input_m, ctx_m)
+                    expected = ref(input_t, ctx_t).detach().float().numpy()
+                    mx.eval(actual)
+                    self.assertEqual(tuple(actual.shape), (2, 3, 8))
+                    self.assertEqual(actual.dtype, getattr(mx, dtype))
+                    np.testing.assert_allclose(np.array(actual).astype(np.float32), expected,
+                                               rtol=1e-4 if dtype == "float32" else 3e-3,
+                                               atol=1e-5 if dtype == "float32" else 3e-3)
+                    if cross:
+                        altered = ref(input_t, torch.zeros_like(ctx_t)).detach().float().numpy()
+                        self.assertGreater(float(np.max(np.abs(expected - altered))), 1e-3)
+                        actual_altered = model(input_m, mx.zeros_like(ctx_m))
+                        mx.eval(actual_altered)
+                        np.testing.assert_allclose(np.array(actual_altered).astype(np.float32), altered,
+                                                   rtol=1e-4 if dtype == "float32" else 3e-3,
+                                                   atol=1e-5 if dtype == "float32" else 3e-3)
