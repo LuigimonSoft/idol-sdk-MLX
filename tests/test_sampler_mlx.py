@@ -81,3 +81,44 @@ class SamplerParityTests(unittest.TestCase):
                                            np.stack(torch_times), atol=1e-4, rtol=1e-6)
                 if not dynamic:
                     np.testing.assert_allclose(np.array(actual), noise - cond, atol=1e-5, rtol=1e-5)
+
+    def test_guidance_modes_match_pytorch_and_each_other(self):
+        mx, np, torch = self.mx, self.np, self.torch
+        noise = np.array([[2., -1.], [1., 3.]], dtype=np.float32)
+        cond = np.array([[0.5, -0.3], [0.7, 0.2]], dtype=np.float32)
+        neg = np.array([[-0.2, 0.4], [-0.1, 0.9]], dtype=np.float32)
+        for strength in (-1.0, 0.0, 0.5, 3.0):
+            outputs = []
+            for batched in (False, True):
+                with self.subTest(strength=strength, batched=batched):
+                    calls_t, calls_m = [], []
+                    def torch_model(sample, time, condition):
+                        calls_t.append(sample.shape[0])
+                        return 0.1 * sample + time[:, None] * 0.001 + condition
+                    def mlx_model(sample, time, condition):
+                        calls_m.append(sample.shape[0])
+                        return 0.1 * sample + time[:, None] * 0.001 + condition
+                    expected = self.torch_sample(torch_model, torch.from_numpy(noise), torch.from_numpy(cond),
+                                                 torch.from_numpy(neg), steps=4, rescale_t=3.0,
+                                                 cfg_strength=strength, batch_cfg=batched, verbose=False).numpy()
+                    actual = self.mlx_sample(mlx_model, mx.array(noise), mx.array(cond), steps=4,
+                                             neg_condition=mx.array(neg), cfg_strength=strength, batch_cfg=batched)
+                    mx.eval(actual)
+                    self.assertEqual(calls_m, calls_t)
+                    self.assertEqual(len(calls_m), 8 if strength > 0 and not batched else 4)
+                    self.assertEqual(calls_m[0], 4 if strength > 0 and batched else 2)
+                    np.testing.assert_allclose(np.array(actual), expected, rtol=1e-4, atol=1e-5)
+                    outputs.append(np.array(actual))
+            np.testing.assert_allclose(outputs[0], outputs[1], rtol=1e-4, atol=1e-5)
+
+    def test_guidance_input_validation(self):
+        mx = self.mx
+        sample = mx.array([[1.]])
+        model = lambda sample, time, condition: condition
+        for strength in (float("nan"), float("inf"), True, "bad"):
+            with self.subTest(strength=strength), self.assertRaises(ValueError):
+                self.mlx_sample(model, sample, sample, cfg_strength=strength)
+        with self.assertRaisesRegex(ValueError, "negative condition"):
+            self.mlx_sample(model, sample, sample, cfg_strength=1.0)
+        with self.assertRaisesRegex(ValueError, "batch_cfg"):
+            self.mlx_sample(model, sample, sample, batch_cfg=1)
