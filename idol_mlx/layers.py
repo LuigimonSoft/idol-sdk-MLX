@@ -129,3 +129,44 @@ class PcdAbsolutePositionEmbedderv2(nn.Module):
             padding = mx.zeros((x.shape[0], self.channels - embedding.shape[1]), dtype=embedding.dtype)
             embedding = mx.concatenate([embedding, padding], axis=-1)
         return embedding
+
+
+def apply_rotary_emb(hidden_states, freqs):
+    """Rotate adjacent feature pairs using real (cosine, sine) frequencies."""
+    pairs = hidden_states.astype(mx.float32).reshape(*hidden_states.shape[:-1], -1, 2)
+    x0, x1 = pairs[..., 0], pairs[..., 1]
+    cosine, sine = freqs[..., 0], freqs[..., 1]
+    rotated = mx.stack([x0 * cosine - x1 * sine, x0 * sine + x1 * cosine], axis=-1)
+    return rotated.reshape(*rotated.shape[:-2], -1).astype(hidden_states.dtype)
+
+
+def _clamp_mul(x, frequency):
+    bounded = mx.tanh(frequency)
+    return x * bounded + mx.stop_gradient(x) * (frequency - bounded)
+
+
+class RePo3DRotaryEmbedding(nn.Module):
+    """Predict real-valued 3D rotary frequencies from token features."""
+
+    def __init__(self, model_channels, num_heads, head_dim, repo_hidden_ratio=0.125, max_freq=16.0):
+        super().__init__()
+        self.num_heads = num_heads
+        hidden = int(model_channels * repo_hidden_ratio)
+        self.norm = LayerNorm32(model_channels)
+        self.gate_map = nn.Linear(model_channels, hidden, bias=False)
+        self.content_map = nn.Linear(model_channels, hidden, bias=False)
+        self.final_map = nn.Linear(hidden, 3 * num_heads, bias=False)
+        first = 2 * (head_dim // 6)
+        dims = (first, first, head_dim - 2 * first)
+        self.freqs_0 = mx.linspace(1.0, float(max_freq), dims[0] // 2, dtype=mx.float32)
+        self.freqs_1 = mx.linspace(1.0, float(max_freq), dims[1] // 2, dtype=mx.float32)
+        self.freqs_2 = mx.linspace(1.0, float(max_freq), dims[2] // 2, dtype=mx.float32)
+
+    def __call__(self, hidden_states):
+        h = self.norm(hidden_states.astype(mx.float32))
+        delta = self.final_map(nn.silu(self.gate_map(h)) * self.content_map(h))
+        delta = delta.reshape(hidden_states.shape[0], hidden_states.shape[1], self.num_heads, 3)
+        angles = [_clamp_mul(delta[..., i:i + 1], freq) * math.pi
+                  for i, freq in enumerate((self.freqs_0, self.freqs_1, self.freqs_2))]
+        angles = mx.concatenate(angles, axis=-1)
+        return mx.stack([mx.cos(angles), mx.sin(angles)], axis=-1)
