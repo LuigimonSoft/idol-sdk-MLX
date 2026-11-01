@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 from safetensors.numpy import save_file
@@ -50,6 +51,32 @@ class CompareParityTests(unittest.TestCase):
             compare_files(self.reference, self.candidate, reference_key="missing", candidate_key="actual", atol=0, rtol=0)
         with self.assertRaisesRegex(ValueError, "Candidate tensor not found"):
             compare_files(self.reference, self.candidate, reference_key="expected", candidate_key="missing", atol=0, rtol=0)
+
+    def test_only_requested_tensors_are_loaded(self):
+        reference_file, candidate_file = MagicMock(), MagicMock()
+        reference_file.keys.return_value = ["expected", "other"]
+        candidate_file.keys.return_value = ["actual", "other"]
+        reference_file.get_tensor.return_value = np.array([1.0])
+        candidate_file.get_tensor.return_value = np.array([1.0])
+        reference_context, candidate_context = MagicMock(), MagicMock()
+        reference_context.__enter__.return_value = reference_file
+        candidate_context.__enter__.return_value = candidate_file
+        with patch("scripts.compare_parity.safe_open", side_effect=[reference_context, candidate_context]):
+            result = compare_files(self.reference, self.candidate, reference_key="expected",
+                                   candidate_key="actual", atol=0, rtol=0)
+        self.assertTrue(result.passed)
+        reference_file.get_tensor.assert_called_once_with("expected")
+        candidate_file.get_tensor.assert_called_once_with("actual")
+
+    def test_overflow_is_reported_as_valid_json(self):
+        save_file({"expected": np.array([-1e308], dtype=np.float64)}, str(self.reference))
+        save_file({"actual": np.array([1e308], dtype=np.float64)}, str(self.candidate))
+        code, output, _ = self.run_cli(atol="0")
+        report = json.loads(output, parse_constant=lambda value: self.fail(f"Invalid JSON constant: {value}"))
+        self.assertEqual(code, 1)
+        self.assertTrue(report["finite"])
+        self.assertEqual(report["max_absolute_error"], "infinity")
+        self.assertEqual(report["mean_absolute_error"], "infinity")
 
     def test_shape_mismatch_missing_file_and_invalid_format(self):
         save_file({"actual": np.array([1.0], dtype=np.float32)}, str(self.candidate))
