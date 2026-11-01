@@ -26,7 +26,7 @@ below to perform inference.
   synthetic parity checks.
 - Preliminary unified and decoder transformer blocks with synthetic FP32 parity checks.
 - A preliminary Euler sampler with optional classifier-free guidance and synthetic parity checks.
-- Explicit seeded MLX noise generation for reproducible synthetic sampling.
+- Explicit seeded MLX noise generation and per-step synthetic trajectory checks.
 - A preliminary file-based parity comparison tool with explicit tolerances.
 - Synthetic reference captures and tests for selected upstream components,
   plus preliminary numerical parity metrics.
@@ -93,6 +93,7 @@ private images or model weights.
 - [Decoder transformer blocks](docs/decoder-transformers.md)
 - [Euler flow sampler](docs/euler-sampler.md)
 - [Seeded noise and reproducibility](docs/reproducibility.md)
+- [Synthetic sampler trajectories](docs/sampler-trajectories.md)
 - [Synthetic reference captures](docs/reference-capture.md)
 - [Parity metrics and provisional tolerances](docs/parity-metrics.md)
 - [Comparing backend outputs](docs/parity-harness.md)
