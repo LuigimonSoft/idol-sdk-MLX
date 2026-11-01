@@ -29,7 +29,8 @@ below to perform inference.
 - Explicit seeded MLX noise generation and per-step synthetic trajectory checks.
 - MLX camera-latent decoding to the upstream JSON-compatible fields.
 - A preliminary FP32 Gaussian feature decoder with strict checkpoint mapping;
-  one reduced trained-weight Metal case still fails provisional tolerances.
+  some reduced trained-weight Metal cases still fail provisional tolerances;
+  optional diagnostics compare block outputs and attention implementations.
 - Preliminary octree traversal and anchor sampling with controlled MLX randomness.
 - A systematic octree resampling primitive with explicit random offsets.
 - A preliminary FP32 octree probability network and strict checkpoint mapping,

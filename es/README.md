@@ -29,7 +29,8 @@ indicada a continuación no realiza inferencia.
 - Ruido MLX con semilla y comparaciones sintéticas de trayectoria por paso.
 - Decodificación MLX del latente de cámara a los campos compatibles con JSON del SDK original.
 - Decoder FP32 preliminar de características gaussianas con carga estricta;
-  un caso reducido con pesos entrenados aún falla las tolerancias en Metal.
+  algunos casos reducidos con pesos entrenados aún fallan las tolerancias en Metal;
+  hay diagnósticos opcionales de bloques y atención.
 - Recorrido preliminar octree y muestreo de anclas con aleatoriedad MLX controlada.
 - Una primitiva de muestreo sistemático octree con desplazamientos aleatorios explícitos.
 - Red preliminar FP32 de probabilidades octree y mapeo estricto de checkpoints,

@@ -95,7 +95,8 @@ class GaussianDecoderTests(unittest.TestCase):
 
     def test_checkpoint_diagnostic_with_synthetic_weights(self):
         import json
-        from scripts.validate_gaussian_checkpoint import compare_checkpoint
+        from unittest.mock import patch
+        from scripts.validate_gaussian_checkpoint import compare_checkpoint, main
 
         reference, _ = self.make_models()
         args = dict(in_channels=3, model_channels=24, cond_channels=8, num_blocks=2, num_heads=2,
@@ -112,6 +113,27 @@ class GaussianDecoderTests(unittest.TestCase):
             report = compare_checkpoint(config_path, path, anchors=3, context_tokens=2)
             self.assertEqual(report["comparisons"]["features"]["count"], 135)
             self.assertTrue(all(item["passed"] for item in report["comparisons"].values()), report)
+            traced = compare_checkpoint(config_path, path, anchors=3, context_tokens=2,
+                                        trace_blocks=True, compare_attention=True)
+            self.assertEqual(traced["comparisons"], report["comparisons"])
+            self.assertEqual([item["index"] for item in traced["block_diagnostics"]], [0, 1])
+            self.assertTrue(all(item["passed"] for item in traced["block_diagnostics"]), traced)
+            self.assertTrue(traced["explicit_attention_diagnostic"]["passed"], traced)
+            self.assertEqual(traced["explicit_attention_diagnostic"]["count"], 135)
+            failed_base = {**traced, "comparisons": {**traced["comparisons"],
+                           "features": {**traced["comparisons"]["features"], "passed": False}}}
+            with patch("scripts.validate_gaussian_checkpoint.compare_checkpoint", return_value=failed_base) as run, \
+                    patch("scripts.validate_gaussian_checkpoint.mx.set_default_device"), patch("builtins.print"):
+                self.assertEqual(main(["--config", str(config_path), "--checkpoint", str(path),
+                                       "--trace-blocks", "--compare-attention"]), 1)
+                self.assertTrue(run.call_args.kwargs["trace_blocks"])
+                self.assertTrue(run.call_args.kwargs["compare_attention"])
+            with self.assertRaisesRegex(ValueError, "at most 256"):
+                compare_checkpoint(config_path, path, anchors=257, compare_attention=True)
+            with self.assertRaisesRegex(ValueError, "at most 256"):
+                compare_checkpoint(config_path, path, context_tokens=257, trace_blocks=True)
+            with self.assertRaisesRegex(ValueError, "diagnostic flags"):
+                compare_checkpoint(config_path, path, trace_blocks=1)
             for name in ("anchors", "context_tokens", "seed"):
                 with self.subTest(argument=name), self.assertRaisesRegex(ValueError, name):
                     compare_checkpoint(config_path, path, **{name: -1})
