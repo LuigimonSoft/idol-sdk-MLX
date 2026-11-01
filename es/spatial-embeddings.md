@@ -18,8 +18,8 @@ carga de checkpoints.
 
 Las pruebas sintéticas de paridad usan las mismas coordenadas en PyTorch y MLX.
 V1 cubre lotes con varios tokens, relleno, frecuencias extendidas y entradas
-FP32/FP16, con `atol=1e-5, rtol=1e-4`. V2 cubre varias muestras, relleno y
-entradas FP32/FP16; FP32 usa las mismas tolerancias y FP16 usa `atol=3e-3,
+FP32/FP16, con `atol=1e-5, rtol=1e-4`. V2 cubre varias muestras, relleno, exponentes fraccionarios de frecuencias
+intermedias y entradas FP32/FP16; FP32 usa las mismas tolerancias y FP16 usa `atol=3e-3,
 rtol=3e-3`. Estos casos y tolerancias provisionales no validan BF16, todas las
 formas, modelos entrenados ni el pipeline completo.
 
