@@ -25,7 +25,7 @@ indicada a continuación no realiza inferencia.
 - Atención propia y cruzada preliminar del decodificador y atención rotatoria
   del denoiser, con pruebas sintéticas.
 - Bloques transformer preliminares unificado y del decodificador con pruebas sintéticas FP32.
-- Un sampler Euler preliminar sin guía, con pruebas sintéticas.
+- Un sampler Euler preliminar con guía classifier-free opcional y pruebas sintéticas.
 - Una herramienta preliminar de comparación de archivos con tolerancias explícitas.
 - Capturas sintéticas y pruebas de algunos componentes originales, además de
   métricas preliminares de equivalencia numérica.
