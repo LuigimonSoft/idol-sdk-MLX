@@ -24,17 +24,36 @@ def time_grid(steps, rescale_t=3.0):
     return tuple(result)
 
 
-def sample_euler(model, noise, condition, *, steps=50, rescale_t=3.0):
-    """Integrate conditional velocities; classifier-free guidance is not applied.
+def sample_euler(model, noise, condition, *, steps=50, rescale_t=3.0,
+                 neg_condition=None, cfg_strength=0.0, batch_cfg=False):
+    """Integrate velocities with optional classifier-free guidance.
 
     `model(sample, time, condition)` receives a float32 time vector scaled by
-    1000. The supplied noise is the initial state; no random draws are made.
-    MLX evaluation remains lazy and is controlled by the caller.
+    1000. Positive guidance requires a negative condition. Batched guidance
+    assumes the model processes batch elements independently. The caller
+    supplies initial noise and controls lazy MLX evaluation.
     """
+    if isinstance(cfg_strength, bool) or not isinstance(cfg_strength, numbers.Real) or not math.isfinite(cfg_strength):
+        raise ValueError("cfg_strength must be a finite number.")
+    if not isinstance(batch_cfg, bool):
+        raise ValueError("batch_cfg must be a boolean.")
+    if cfg_strength > 0 and neg_condition is None:
+        raise ValueError("A negative condition is required when guidance is enabled.")
     grid = time_grid(steps, rescale_t)
     sample = noise
     for t, next_t in zip(grid, grid[1:]):
-        times = mx.full((sample.shape[0],), 1000.0 * t, dtype=mx.float32)
-        velocity = model(sample, times, condition)
+        if cfg_strength > 0 and batch_cfg:
+            count = sample.shape[0]
+            both_sample = mx.concatenate([sample, sample], axis=0)
+            both_condition = mx.concatenate([condition, neg_condition], axis=0)
+            times = mx.full((both_sample.shape[0],), 1000.0 * t, dtype=mx.float32)
+            both = model(both_sample, times, both_condition)
+            velocity = (1 + cfg_strength) * both[:count] - cfg_strength * both[count:]
+        else:
+            times = mx.full((sample.shape[0],), 1000.0 * t, dtype=mx.float32)
+            velocity = model(sample, times, condition)
+            if cfg_strength > 0:
+                negative = model(sample, times, neg_condition)
+                velocity = (1 + cfg_strength) * velocity - cfg_strength * negative
         sample = sample - velocity * (t - next_t)
     return sample
