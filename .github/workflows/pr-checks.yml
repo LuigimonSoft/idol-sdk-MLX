@@ -61,6 +61,11 @@ jobs:
           IDOL_REFERENCE_SOURCE: ${{ github.workspace }}/reference-upstream
           IDOL_TEST_MLX_DEVICE: cpu
         run: python -m unittest discover -s tests -p 'test_camera_mlx.py' -v
+      - name: Compare octree resampling with PyTorch on CPU
+        env:
+          IDOL_REFERENCE_SOURCE: ${{ github.workspace }}/reference-upstream
+          IDOL_TEST_MLX_DEVICE: cpu
+        run: python -m unittest discover -s tests -p 'test_octree_sampling.py' -v
       - name: Compare synthetic octree decoder with PyTorch on CPU
         env:
           IDOL_REFERENCE_SOURCE: ${{ github.workspace }}/reference-upstream

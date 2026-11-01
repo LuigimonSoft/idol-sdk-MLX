@@ -28,6 +28,7 @@ indicada a continuación no realiza inferencia.
 - Un sampler Euler preliminar con guía classifier-free opcional y pruebas sintéticas.
 - Ruido MLX con semilla y comparaciones sintéticas de trayectoria por paso.
 - Decodificación MLX del latente de cámara a los campos compatibles con JSON del SDK original.
+- Una primitiva de muestreo sistemático octree con desplazamientos aleatorios explícitos.
 - Red preliminar FP32 de probabilidades octree y mapeo estricto de checkpoints,
   probados con pesos sintéticos y escenarios reducidos con checkpoint entrenado.
 - Un denoiser FP32 preliminar y carga estricta de checkpoints. Un diagnóstico
@@ -86,6 +87,8 @@ el cumplimiento de sus licencias respectivas. Consulta
 imágenes privadas ni pesos al repositorio.
 
 ## Documentación
+
+- [Muestreo sistemático octree](octree-resampling.md)
 
 - [Red de probabilidades octree](octree-network.md)
 
