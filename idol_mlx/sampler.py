@@ -57,3 +57,19 @@ def sample_euler(model, noise, condition, *, steps=50, rescale_t=3.0,
                 velocity = (1 + cfg_strength) * velocity - cfg_strength * negative
         sample = sample - velocity * (t - next_t)
     return sample
+
+
+def seeded_noise(shape, seed, *, dtype="float32"):
+    """Create normal noise using a local MLX key, without changing global RNG state.
+
+    A seed identifies a sample for a fixed MLX version, device, shape and dtype;
+    it does not imply the same random stream as another framework.
+    """
+    if (not isinstance(shape, tuple) or not shape or
+            any(isinstance(dim, bool) or not isinstance(dim, int) or dim < 1 for dim in shape)):
+        raise ValueError("shape must be a non-empty tuple of positive integers.")
+    if isinstance(seed, bool) or not isinstance(seed, int) or not 0 <= seed < 2**64:
+        raise ValueError("seed must be an unsigned 64-bit integer.")
+    if dtype not in ("float32", "float16", "bfloat16"):
+        raise ValueError("dtype must be float32, float16, or bfloat16.")
+    return mx.random.normal(shape=shape, dtype=getattr(mx, dtype), key=mx.random.key(seed))
