@@ -167,3 +167,22 @@ class SamplerParityTests(unittest.TestCase):
                                    ((2,), True, "float32"), ((2,), 0, "float64")):
             with self.subTest(shape=shape, seed=seed, dtype=dtype), self.assertRaises(ValueError):
                 self.seeded_noise(shape, seed, dtype=dtype)
+
+    def test_synthetic_trajectory_reports_short_and_full_sequences(self):
+        from scripts.sampler_trajectory import compare_states, run_synthetic
+
+        np = self.np
+        for steps in (2, 50):
+            for batched in (False, True):
+                with self.subTest(steps=steps, batched=batched):
+                    reports = run_synthetic(steps, batch_cfg=batched)
+                    self.assertEqual([item["step"] for item in reports], list(range(steps + 1)))
+                    self.assertTrue(all(item["passed"] for item in reports), reports)
+                    self.assertTrue(all(item["count"] == 6 for item in reports))
+        mismatch = compare_states([np.array([1.0]), np.array([2.0])],
+                                  [np.array([1.0]), np.array([2.1])], atol=1e-5, rtol=1e-4)
+        self.assertTrue(mismatch[0]["passed"])
+        self.assertFalse(mismatch[1]["passed"])
+        self.assertAlmostEqual(mismatch[1]["max_absolute_error"], 0.1)
+        with self.assertRaises(ValueError):
+            compare_states([np.array([1.0])], [], atol=1e-5, rtol=1e-4)
