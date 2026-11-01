@@ -131,7 +131,7 @@ class DenoiserParityTests(unittest.TestCase):
         import json
         from unittest.mock import patch
         from idol_mlx.layers import PcdAbsolutePositionEmbedder
-        from scripts.validate_dit_checkpoint import TorchPositionEmbedder, compare_checkpoint
+        from scripts.validate_dit_checkpoint import TorchPositionEmbedder, compare_checkpoint, main
 
         config = dict(q_token_length=3, in_channels=4, cam_channels=5, model_channels=24,
                       cond_channels=6, cond2_channels=7, num_blocks=1, num_refiner_blocks=2,
@@ -156,6 +156,7 @@ class DenoiserParityTests(unittest.TestCase):
             self.assertEqual(set(report["comparisons"]), {"position", "position_shared_frequencies", "latent", "camera",
                                                           "latent_shared_frequencies", "camera_shared_frequencies"})
             self.assertTrue(all(value["passed"] for value in report["comparisons"].values()), report)
+            self.assertEqual((report["seed"], report["timestep"]), (2026, 500.0))
             self.assertEqual(report["comparisons"]["latent"]["count"], 12)
             self.assertEqual(report["comparisons"]["latent_shared_frequencies"]["count"], 12)
             self.assertEqual(report["comparisons"]["camera_shared_frequencies"]["count"], 5)
@@ -197,5 +198,35 @@ class DenoiserParityTests(unittest.TestCase):
             self.assertFalse(changed["comparisons"]["latent"]["passed"])
             self.assertTrue(changed["comparisons"]["latent_shared_frequencies"]["passed"])
             self.assertTrue(changed["comparisons"]["camera_shared_frequencies"]["passed"])
+            captured = []
+            reference_forward = self.torch_model.forward
+
+            def capture_inputs(module, sample, time, condition):
+                captured.append((sample["latent"].numpy().copy(), time.numpy().copy()))
+                return reference_forward(module, sample, time, condition)
+
+            with patch.object(self.torch_model, "forward", capture_inputs):
+                for seed, timestep in ((7, 0.0), (7, 0.0), (8, 1000.0)):
+                    scenario = compare_checkpoint(config_path, checkpoint_path, tokens=2,
+                                                  context_tokens=2, seed=seed, timestep=timestep)
+                    self.assertEqual((scenario["seed"], scenario["timestep"]), (seed, timestep))
+                    self.assertTrue(all(item["passed"] for item in scenario["comparisons"].values()))
+            self.np.testing.assert_array_equal(captured[0][0], captured[1][0])
+            self.assertFalse(self.np.array_equal(captured[0][0], captured[2][0]))
+            self.np.testing.assert_array_equal(captured[0][1], [0.0])
+            self.np.testing.assert_array_equal(captured[2][1], [1000.0])
+            with patch("scripts.validate_dit_checkpoint.compare_checkpoint", return_value=report) as run, \
+                    patch("scripts.validate_dit_checkpoint.mx.set_default_device"), \
+                    patch("builtins.print"):
+                self.assertEqual(main(["--config", str(config_path), "--checkpoint", str(checkpoint_path),
+                                       "--seed", "8", "--timestep", "1000"]), 0)
+                self.assertEqual(run.call_args.kwargs["seed"], 8)
+                self.assertEqual(run.call_args.kwargs["timestep"], 1000.0)
+            for invalid in (-1, 2**64, True):
+                with self.subTest(seed=invalid), self.assertRaises(ValueError):
+                    compare_checkpoint(config_path, checkpoint_path, seed=invalid)
+            for invalid in (-1, 1001, float("nan"), float("inf"), True):
+                with self.subTest(timestep=invalid), self.assertRaises(ValueError):
+                    compare_checkpoint(config_path, checkpoint_path, timestep=invalid)
             with self.assertRaises(ValueError):
                 compare_checkpoint(config_path, checkpoint_path, tokens=4)

@@ -51,6 +51,28 @@ MLX y no están cubiertas por este resultado con checkpoint entrenado. No se
 ampliaron las tolerancias provisionales. Desactivar `MLX_ENABLE_TF32` no cambió
 los errores originales de GPU en este caso.
 
+## Escenarios reducidos adicionales
+
+También se comparó el mismo checkpoint y entorno con tres entradas sintéticas
+deterministas en cada dispositivo MLX. Las tolerancias no cambiaron y las seis
+comparaciones pasaron en cada escenario. La tabla muestra el error absoluto
+máximo de las salidas nativas; el resultado también depende del error relativo.
+
+| Dispositivo | Tokens latentes | Tokens de contexto | Semilla | Tiempo | Error máximo latente | Error máximo cámara |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| CPU | 8 | 4 | 0 | 0 | 3.77465e-6 | 2.65241e-5 |
+| CPU | 32 | 8 | 42 | 250 | 4.05312e-6 | 9.20892e-6 |
+| CPU | 64 | 16 | 123 | 1000 | 1.97887e-5 | 1.07288e-5 |
+| GPU Metal | 8 | 4 | 0 | 0 | 2.86102e-6 | 2.87294e-5 |
+| GPU Metal | 32 | 8 | 42 | 250 | 4.05312e-6 | 1.44541e-5 |
+| GPU Metal | 64 | 16 | 123 | 1000 | 2.49147e-5 | 1.74046e-5 |
+
+Todos los casos usan lote 1 y recortan las primeras posiciones del checkpoint.
+Son ejecuciones independientes, no una trayectoria de muestreo. No validan el
+modelo de 8192 tokens, precisión mixta, otros checkpoints ni inferencia completa.
+El generador es `default_rng` de NumPy; la semilla reproduce las entradas con la
+misma versión de NumPy, formas y orden de generación.
+
 ## Reproducir
 
 Instala MLX y las dependencias de referencia fijadas en un mismo entorno. Obtén
@@ -62,8 +84,10 @@ PYTHONPATH=../idol-sdk-reference .venv-reference/bin/python -m scripts.validate_
   --config /trusted/path/config.json --checkpoint /trusted/path/denoiser.safetensors --device gpu
 ```
 
-Usa `--device cpu` para MLX CPU y `--tokens` o `--context-tokens` para elegir
-longitudes reducidas. La salida JSON contiene solo métricas agregadas; el código
+Usa `--device cpu` para MLX CPU, `--tokens` o `--context-tokens` para elegir
+longitudes reducidas, `--seed` para una semilla entera sin signo de 64 bits y
+`--timestep` para un valor finito entre 0 y 1000. Los valores por defecto son
+semilla 2026 y tiempo 500. La salida JSON contiene solo métricas agregadas; el código
 0 indica que las seis comparaciones pasan y el 1 que alguna falla. La herramienta
 carga el modelo y checkpoint completos, por lo que necesita memoria suficiente.
 No escribe pesos ni entradas. La prueba automatizada usa un checkpoint sintético

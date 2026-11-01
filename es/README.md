@@ -28,7 +28,7 @@ indicada a continuación no realiza inferencia.
 - Un sampler Euler preliminar con guía classifier-free opcional y pruebas sintéticas.
 - Ruido MLX con semilla y comparaciones sintéticas de trayectoria por paso.
 - Un denoiser FP32 preliminar y carga estricta de checkpoints. Un diagnóstico
-  reducido con pesos entrenados supera las tolerancias provisionales para una entrada FP32.
+  reducido con pesos entrenados supera las tolerancias provisionales para varias entradas FP32.
 - Una herramienta preliminar de comparación de archivos con tolerancias explícitas.
 - Capturas sintéticas y pruebas de algunos componentes originales, además de
   métricas preliminares de equivalencia numérica.
@@ -75,7 +75,7 @@ dependen del SDK original; una ejecución con pruebas omitidas no constituye una
 validación completa. Las pruebas actuales no demuestran inferencia completa ni
 equivalencia PyTorch/MLX. Un [diagnóstico reducido con checkpoint entrenado](dit-trained-validation.md)
 compara las salidas del denoiser con frecuencias nativas y derivadas de la
-referencia; ambas rutas pasan para la entrada FP32 reducida registrada.
+referencia; ambas rutas pasan en los escenarios FP32 reducidos registrados.
 
 La futura inferencia completa requiere acceso aprobado a DINOv3 y FLUX.2 dev y
 el cumplimiento de sus licencias respectivas. Consulta
