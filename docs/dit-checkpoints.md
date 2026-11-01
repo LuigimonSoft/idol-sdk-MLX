@@ -20,12 +20,14 @@ load_dit_checkpoint(model, "/trusted/path/denoiser.safetensors")
 ```
 
 The loader has been tested with a synthetic small FP32 checkpoint containing all
-123 expected tensors, not with trained checkpoints. Tests compare the loaded
+123 expected tensors and has strictly loaded the trained 560-tensor FP32
+checkpoint in a [reduced diagnostic](dit-trained-validation.md). That diagnostic
+failed provisional numerical tolerances; loading is not a parity guarantee. Tests compare the loaded
 model's forward output with PyTorch and confirm missing/extra keys, wrong shape,
 wrong dtype and non-FP32 targets are rejected. The tests check that rejected
 checkpoints do not change model parameters. Upstream mixed-precision checkpoints
 are not supported by this loader without a separately validated conversion.
-Full-size memory requirements, trained model outputs and end-to-end inference
+Full-size memory requirements, trained-model parity and end-to-end inference
 remain unvalidated. No model files, credentials or private inputs belong in the
 repository.
 

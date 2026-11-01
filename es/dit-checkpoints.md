@@ -19,13 +19,15 @@ from idol_mlx.dit_weights import load_dit_checkpoint
 load_dit_checkpoint(model, "/trusted/path/denoiser.safetensors")
 ```
 
-El cargador se probó con un checkpoint FP32 sintético pequeño de 123 tensores,
-no con checkpoints entrenados. Las pruebas comparan la salida del modelo
+El cargador se probó con un checkpoint FP32 sintético pequeño de 123 tensores
+y cargó estrictamente el checkpoint entrenado de 560 tensores en un
+[diagnóstico reducido](dit-trained-validation.md). Ese diagnóstico no superó
+las tolerancias numéricas provisionales; cargar no garantiza paridad. Las pruebas comparan la salida del modelo
 cargado con PyTorch y comprueban el rechazo de claves ausentes o extra, formas
 o tipos incorrectos y modelos de destino no FP32. También verifican que un
 checkpoint rechazado no modifique los parámetros. Los checkpoints originales
 de precisión mixta no están soportados sin una conversión validada por separado.
-Faltan pruebas de memoria a tamaño completo, salidas con pesos entrenados e
+Faltan pruebas de memoria a tamaño completo, paridad con pesos entrenados e
 inferencia integral. No subas pesos, credenciales ni entradas privadas.
 
 Consulta el [denoiser FP32 preliminar](dit-fp32.md) para pruebas y limitaciones.

@@ -126,3 +126,58 @@ class DenoiserParityTests(unittest.TestCase):
         model.input_layer.weight = model.input_layer.weight.astype(self.mx.float16)
         with self.assertRaisesRegex(ValueError, "target model tensors must be float32"):
             self.load_checkpoint(model, "unused.safetensors")
+
+    def test_checkpoint_comparison_tool_with_synthetic_model(self):
+        import json
+        from unittest.mock import patch
+        from idol_mlx.layers import PcdAbsolutePositionEmbedder
+        from scripts.validate_dit_checkpoint import TorchPositionEmbedder, compare_checkpoint
+
+        config = dict(q_token_length=3, in_channels=4, cam_channels=5, model_channels=24,
+                      cond_channels=6, cond2_channels=7, num_blocks=1, num_refiner_blocks=2,
+                      num_heads=2, num_head_channels=12, mlp_ratio=1.5)
+        reference = self.torch_model(**config).eval().float()
+        positions = self.np.array([[[0.1, 0.2, 0.3], [0.4, 0.5, 0.6], [0.7, 0.8, 0.9]]],
+                                  dtype=self.np.float32)
+        with self.torch.no_grad():
+            reference.pos_pe.copy_(self.torch.from_numpy(positions))
+        data = {"denoiser": {"name": "LatentSeqMMFlowModel", "args": config},
+                "decoder": {"name": "unused", "args": {}},
+                "decoder_gs": {"name": "unused", "args": {}},
+                "image_size": 16, "max_voxel_level": 1,
+                "image_encoders": {"dinov3": "unused", "flux2_vae": "unused"}}
+        with tempfile.TemporaryDirectory() as directory:
+            config_path = Path(directory) / "config.json"
+            checkpoint_path = Path(directory) / "synthetic.safetensors"
+            config_path.write_text(json.dumps(data), encoding="utf-8")
+            self.save_file({name: value.detach().contiguous() for name, value in reference.state_dict().items()},
+                           str(checkpoint_path))
+            report = compare_checkpoint(config_path, checkpoint_path, tokens=3, context_tokens=2)
+            self.assertEqual(set(report["comparisons"]), {"position", "position_shared_frequencies", "latent", "camera"})
+            self.assertTrue(all(value["passed"] for value in report["comparisons"].values()), report)
+            self.assertEqual(report["comparisons"]["latent"]["count"], 12)
+            observed = {"torch": [], "mlx": []}
+            torch_forward = TorchPositionEmbedder.forward
+            mlx_call = PcdAbsolutePositionEmbedder.__call__
+
+            def capture_torch(module, value):
+                observed["torch"].append(value.detach().numpy().copy())
+                return torch_forward(module, value)
+
+            def capture_mlx(module, value):
+                observed["mlx"].append(self.np.array(value))
+                return mlx_call(module, value)
+
+            with patch.object(TorchPositionEmbedder, "forward", capture_torch), \
+                    patch.object(PcdAbsolutePositionEmbedder, "__call__", capture_mlx):
+                reduced = compare_checkpoint(config_path, checkpoint_path, tokens=2, context_tokens=2)
+            self.assertTrue(all(value["passed"] for value in reduced["comparisons"].values()), reduced)
+            self.assertEqual(reduced["comparisons"]["position"]["count"], 48)
+            self.assertEqual(reduced["comparisons"]["position_shared_frequencies"]["count"], 48)
+            self.assertEqual(reduced["comparisons"]["latent"]["count"], 8)
+            for backend in ("torch", "mlx"):
+                self.assertTrue(observed[backend])
+                for actual_positions in observed[backend]:
+                    self.np.testing.assert_array_equal(actual_positions, positions[:, :2, :])
+            with self.assertRaises(ValueError):
+                compare_checkpoint(config_path, checkpoint_path, tokens=4)
