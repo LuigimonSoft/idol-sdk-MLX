@@ -17,8 +17,8 @@ call; no learned parameters or checkpoint loading are introduced.
 
 Synthetic PyTorch parity tests use shared coordinates. V1 covers batches of
 multiple tokens, padding, extended frequencies and FP32/FP16 inputs, with
-`atol=1e-5, rtol=1e-4`. V2 covers multiple samples, padding and FP32/FP16
-inputs; FP32 uses those same tolerances and FP16 uses `atol=3e-3, rtol=3e-3`.
+`atol=1e-5, rtol=1e-4`. V2 covers multiple samples, padding, fractional interior frequency exponents
+and FP32/FP16 inputs; FP32 uses those same tolerances and FP16 uses `atol=3e-3, rtol=3e-3`.
 These provisional tolerances and cases do not validate BF16, all shapes,
 trained models or the full pipeline.
 
