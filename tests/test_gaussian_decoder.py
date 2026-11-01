@@ -113,8 +113,17 @@ class GaussianDecoderTests(unittest.TestCase):
             report = compare_checkpoint(config_path, path, anchors=3, context_tokens=2)
             self.assertEqual(report["comparisons"]["features"]["count"], 135)
             self.assertTrue(all(item["passed"] for item in report["comparisons"].values()), report)
-            traced = compare_checkpoint(config_path, path, anchors=3, context_tokens=2,
-                                        trace_blocks=True, compare_attention=True)
+            original_attention = self.mx.fast.scaled_dot_product_attention
+            with patch.object(self.mx, "softmax", wraps=self.mx.softmax) as explicit_softmax:
+                traced = compare_checkpoint(config_path, path, anchors=3, context_tokens=2,
+                                            trace_blocks=True, compare_attention=True)
+            self.assertGreater(explicit_softmax.call_count, 0)
+            self.assertTrue(all(call.kwargs.get("precise") is True for call in explicit_softmax.call_args_list))
+            self.assertIs(self.mx.fast.scaled_dot_product_attention, original_attention)
+            with patch.object(self.mx, "softmax", side_effect=RuntimeError("simulated diagnostic failure")):
+                with self.assertRaisesRegex(RuntimeError, "simulated diagnostic failure"):
+                    compare_checkpoint(config_path, path, anchors=3, context_tokens=2, compare_attention=True)
+            self.assertIs(self.mx.fast.scaled_dot_product_attention, original_attention)
             self.assertEqual(traced["comparisons"], report["comparisons"])
             self.assertEqual([item["index"] for item in traced["block_diagnostics"]], [0, 1])
             self.assertTrue(all(item["passed"] for item in traced["block_diagnostics"]), traced)
