@@ -20,6 +20,7 @@ below to perform inference.
 - Explicit in-memory tensor name mapping and standard ungrouped Conv2d layout
   conversion, with strict output-schema validation.
 - An opt-in preliminary precision and explicit evaluation-boundary policy.
+- Selected MLX normalization layers with synthetic PyTorch parity checks.
 - A preliminary file-based parity comparison tool with explicit tolerances.
 - Synthetic reference captures and tests for selected upstream components,
   plus preliminary numerical parity metrics.
@@ -75,6 +76,7 @@ private images or model weights.
 - [Configuration and checkpoint validation](docs/config-and-weights.md)
 - [Preliminary weight mapping](docs/weight-mapping.md)
 - [Precision and lazy evaluation policy](docs/precision-evaluation.md)
+- [MLX normalization layers](docs/normalization-layers.md)
 - [Synthetic reference captures](docs/reference-capture.md)
 - [Parity metrics and provisional tolerances](docs/parity-metrics.md)
 - [Comparing backend outputs](docs/parity-harness.md)
