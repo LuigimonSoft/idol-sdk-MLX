@@ -95,6 +95,25 @@ class SystematicResamplingTests(unittest.TestCase):
         self.assertTrue((values >= 0).all())
         self.assertEqual(int(values.sum()), count)
 
+    def test_all_supported_integer_count_types(self):
+        mx, np = self.mx, self.np
+        probs = mx.array([[0.5, 0.5], [0.5, 0.5]])
+        offsets = mx.array([0.5, 0.5])
+        for dtype in (mx.int8, mx.int16, mx.int32, mx.int64,
+                      mx.uint8, mx.uint16, mx.uint32, mx.uint64):
+            with self.subTest(dtype=dtype):
+                result = self.sample(probs, mx.array([0, 7], dtype=dtype), offsets=offsets)
+                mx.eval(result)
+                np.testing.assert_array_equal(np.array(result), [[0, 0], [4, 3]])
+        for dtype in (mx.int8, mx.int16, mx.int32, mx.int64):
+            with self.subTest(negative_dtype=dtype), self.assertRaises(ValueError):
+                self.sample(probs, mx.array([0, -1], dtype=dtype), offsets=offsets)
+        for dtype in (mx.int32, mx.int64, mx.uint32, mx.uint64):
+            with self.subTest(large_dtype=dtype), self.assertRaises(ValueError):
+                self.sample(probs, mx.array([0, 2**24], dtype=dtype), offsets=offsets)
+        with self.assertRaises(ValueError):
+            self.sample(probs, mx.array(np.array([0, 2**64 - 1], dtype=np.uint64)), offsets=offsets)
+
     def test_rejects_invalid_inputs(self):
         mx = self.mx
         sample = self.sample

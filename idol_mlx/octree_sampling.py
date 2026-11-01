@@ -23,8 +23,12 @@ def systematic_resample(probabilities, counts, *, offsets):
         raise ValueError("counts must have an integer dtype.")
     if counts.size == 0:
         raise ValueError("counts must not be empty.")
+    # Widen before comparing: MLX scalar comparisons otherwise narrow the limit
+    # to the input dtype. Out-of-range uint64 values wrap negative and fail too.
+    wide_counts = counts.astype(mx.int64)
     valid = (mx.all(mx.isfinite(probabilities)) & mx.all(mx.isfinite(offsets)) &
-             mx.all((offsets >= 0) & (offsets < 1)) & mx.all((counts >= 0) & (counts <= 2**24 - 1)))
+             mx.all((offsets >= 0) & (offsets < 1)) &
+             mx.all((wide_counts >= 0) & (wide_counts <= 2**24 - 1)))
     if not bool(valid.item()):
         raise ValueError("inputs must be finite, offsets in [0, 1), and counts in [0, 2**24 - 1].")
     bins = probabilities.shape[-1]
@@ -33,7 +37,7 @@ def systematic_resample(probabilities, counts, *, offsets):
     # Preserve upstream behavior for subunit sums as well as its zero-row fallback.
     values = mx.where(sums == 0, 1.0 / bins, values / mx.maximum(sums, 1))
     cdf = mx.minimum(mx.cumsum(values, axis=-1), 1.0)
-    n = counts.astype(mx.int64)[..., None]
+    n = wide_counts[..., None]
     n_float = mx.maximum(n, 1).astype(mx.float32)
     start = offsets[..., None] / n_float
     # Upper bound of the upstream float32 grid: the number of samples <= cdf.
