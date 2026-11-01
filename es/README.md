@@ -28,6 +28,8 @@ indicada a continuación no realiza inferencia.
 - Un sampler Euler preliminar con guía classifier-free opcional y pruebas sintéticas.
 - Ruido MLX con semilla y comparaciones sintéticas de trayectoria por paso.
 - Decodificación MLX del latente de cámara a los campos compatibles con JSON del SDK original.
+- Decoder FP32 preliminar de características gaussianas con carga estricta;
+  un caso reducido con pesos entrenados aún falla las tolerancias en Metal.
 - Recorrido preliminar octree y muestreo de anclas con aleatoriedad MLX controlada.
 - Una primitiva de muestreo sistemático octree con desplazamientos aleatorios explícitos.
 - Red preliminar FP32 de probabilidades octree y mapeo estricto de checkpoints,
@@ -38,9 +40,10 @@ indicada a continuación no realiza inferencia.
 - Capturas sintéticas y pruebas de algunos componentes originales, además de
   métricas preliminares de equivalencia numérica.
 
-Existe una pasada DiT FP32 preliminar para configuraciones sintéticas. Faltan los
-esquemas de checkpoints, la conversión de pesos entrenados, los encoders, los
-decodificadores completos y la inferencia integral.
+Las rutas FP32 preliminares del denoiser y los decoders tienen validación
+limitada con datos sintéticos y checkpoints entrenados. Quedan pendientes más
+esquemas y conversiones de checkpoints, encoders, decodificadores completos e
+inferencia integral.
 
 ## Instalación
 
@@ -88,6 +91,8 @@ el cumplimiento de sus licencias respectivas. Consulta
 imágenes privadas ni pesos al repositorio.
 
 ## Documentación
+
+- [Decoder de características gaussianas](gaussian-decoder.md)
 
 - [Observaciones de límites y memoria del octree](octree-profiling.md)
 
