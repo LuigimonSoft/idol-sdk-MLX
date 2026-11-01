@@ -126,3 +126,29 @@ class DenoiserParityTests(unittest.TestCase):
         model.input_layer.weight = model.input_layer.weight.astype(self.mx.float16)
         with self.assertRaisesRegex(ValueError, "target model tensors must be float32"):
             self.load_checkpoint(model, "unused.safetensors")
+
+    def test_checkpoint_comparison_tool_with_synthetic_model(self):
+        import json
+        from scripts.validate_dit_checkpoint import compare_checkpoint
+
+        config = dict(q_token_length=3, in_channels=4, cam_channels=5, model_channels=24,
+                      cond_channels=6, cond2_channels=7, num_blocks=1, num_refiner_blocks=2,
+                      num_heads=2, num_head_channels=12, mlp_ratio=1.5)
+        reference = self.torch_model(**config).eval().float()
+        data = {"denoiser": {"name": "LatentSeqMMFlowModel", "args": config},
+                "decoder": {"name": "unused", "args": {}},
+                "decoder_gs": {"name": "unused", "args": {}},
+                "image_size": 16, "max_voxel_level": 1,
+                "image_encoders": {"dinov3": "unused", "flux2_vae": "unused"}}
+        with tempfile.TemporaryDirectory() as directory:
+            config_path = Path(directory) / "config.json"
+            checkpoint_path = Path(directory) / "synthetic.safetensors"
+            config_path.write_text(json.dumps(data), encoding="utf-8")
+            self.save_file({name: value.detach().contiguous() for name, value in reference.state_dict().items()},
+                           str(checkpoint_path))
+            report = compare_checkpoint(config_path, checkpoint_path, tokens=3, context_tokens=2)
+            self.assertEqual(set(report["comparisons"]), {"position", "latent", "camera"})
+            self.assertTrue(all(value["passed"] for value in report["comparisons"].values()), report)
+            self.assertEqual(report["comparisons"]["latent"]["count"], 12)
+            with self.assertRaises(ValueError):
+                compare_checkpoint(config_path, checkpoint_path, tokens=4)
