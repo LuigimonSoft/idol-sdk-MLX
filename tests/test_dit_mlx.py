@@ -223,10 +223,10 @@ class DenoiserParityTests(unittest.TestCase):
                 self.assertEqual(run.call_args.kwargs["seed"], 8)
                 self.assertEqual(run.call_args.kwargs["timestep"], 1000.0)
             for invalid in (-1, 2**64, True):
-                with self.subTest(seed=invalid), self.assertRaises(ValueError):
-                    compare_checkpoint(config_path, checkpoint_path, seed=invalid)
+                with self.subTest(seed=invalid), self.assertRaisesRegex(ValueError, "seed must be"):
+                    compare_checkpoint(config_path, checkpoint_path, tokens=2, seed=invalid)
             for invalid in (-1, 1001, float("nan"), float("inf"), True):
-                with self.subTest(timestep=invalid), self.assertRaises(ValueError):
-                    compare_checkpoint(config_path, checkpoint_path, timestep=invalid)
+                with self.subTest(timestep=invalid), self.assertRaisesRegex(ValueError, "timestep must be"):
+                    compare_checkpoint(config_path, checkpoint_path, tokens=2, timestep=invalid)
             with self.assertRaises(ValueError):
                 compare_checkpoint(config_path, checkpoint_path, tokens=4)
