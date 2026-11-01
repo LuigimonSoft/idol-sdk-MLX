@@ -78,3 +78,54 @@ class SinusoidalEmbedder(nn.Module):
         if self.two_pi:
             args = args * (2 * math.pi)
         return self.mlp(mx.concatenate([mx.cos(args), mx.sin(args)], axis=-1))
+
+
+class PcdAbsolutePositionEmbedder(nn.Module):
+    """Encode per-token coordinates using the denoiser's frequency schedule."""
+
+    def __init__(self, channels, in_channels=3, max_res=16):
+        super().__init__()
+        self.channels = channels
+        self.in_channels = in_channels
+        self.max_res = max_res
+        self.freq_dim = channels // in_channels // 2
+
+    def __call__(self, x):
+        exponents = mx.arange(self.max_res, dtype=mx.float32)
+        remaining = max(0, self.freq_dim - self.max_res)
+        if remaining:
+            tail = mx.arange(remaining, dtype=mx.float32) / remaining * self.max_res
+            exponents = mx.concatenate([exponents, tail])
+        frequencies = mx.power(2.0, exponents[:self.freq_dim])
+        angles = mx.outer(x.reshape(-1), frequencies) * 2 * math.pi
+        embedding = mx.concatenate([mx.sin(angles), mx.cos(angles)], axis=-1)
+        embedding = embedding.reshape(*x.shape[:-1], -1)
+        if embedding.shape[-1] < self.channels:
+            padding = mx.zeros((*x.shape[:-1], self.channels - embedding.shape[-1]), dtype=mx.float32)
+            embedding = mx.concatenate([embedding, padding], axis=-1)
+        return embedding
+
+
+class PcdAbsolutePositionEmbedderv2(nn.Module):
+    """Encode per-sample coordinates using the decoder's frequency schedule."""
+
+    def __init__(self, channels, in_channels=3, max_res=10):
+        super().__init__()
+        self.channels = channels
+        self.freq_dim = channels // in_channels // 2
+        self.max_res = max_res
+
+    def __call__(self, x):
+        logs = mx.linspace(0.0, float(self.max_res), self.freq_dim, dtype=mx.float32)
+        frequencies = mx.power(2.0, logs).astype(x.dtype)
+        product = mx.expand_dims(x, -1) * frequencies
+        # PyTorch applies the scalar in FP32 before rounding a reduced-precision result.
+        if x.dtype in (mx.float16, mx.bfloat16):
+            angles = (product.astype(mx.float32) * math.pi).astype(x.dtype)
+        else:
+            angles = product * math.pi
+        embedding = mx.concatenate([mx.sin(angles), mx.cos(angles)], axis=-1).reshape(x.shape[0], -1)
+        if embedding.shape[1] < self.channels:
+            padding = mx.zeros((x.shape[0], self.channels - embedding.shape[1]), dtype=embedding.dtype)
+            embedding = mx.concatenate([embedding, padding], axis=-1)
+        return embedding

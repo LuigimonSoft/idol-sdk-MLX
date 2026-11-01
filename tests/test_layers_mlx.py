@@ -188,3 +188,65 @@ class SinusoidalEmbedderParityTests(unittest.TestCase):
                     self.assertEqual(tuple(actual.shape), (5, 6))
                     self.assertEqual(actual.dtype, mx.float32)
                     np.testing.assert_allclose(np.array(actual), expected, rtol=1e-4, atol=1e-5)
+
+
+@unittest.skipUnless(importlib.util.find_spec("mlx") and os.environ.get("IDOL_REFERENCE_SOURCE"),
+                     "MLX and pinned reference source are required")
+class SpatialEmbeddingParityTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import mlx.core as mx
+        import numpy as np
+        import torch
+        from idol_mlx.layers import PcdAbsolutePositionEmbedder, PcdAbsolutePositionEmbedderv2
+
+        sys.path.insert(0, str(Path(os.environ["IDOL_REFERENCE_SOURCE"]).resolve()))
+        from idol.models.layers import PcdAbsolutePositionEmbedder as TorchV1, PcdAbsolutePositionEmbedderv2 as TorchV2
+
+        cls.mx, cls.np, cls.torch = mx, np, torch
+        cls.mlx_v1, cls.mlx_v2 = PcdAbsolutePositionEmbedder, PcdAbsolutePositionEmbedderv2
+        cls.torch_v1, cls.torch_v2 = TorchV1, TorchV2
+        cls.previous_device = mx.default_device()
+        device = os.environ.get("IDOL_TEST_MLX_DEVICE", "cpu")
+        if device not in ("cpu", "gpu"):
+            raise ValueError("IDOL_TEST_MLX_DEVICE must be cpu or gpu")
+        mx.set_default_device(mx.gpu if device == "gpu" else mx.cpu)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.mx.set_default_device(cls.previous_device)
+
+    def test_denoiser_positions_across_padding_and_extended_frequencies(self):
+        mx, np, torch = self.mx, self.np, self.torch
+        values = np.array([[[0., 0.25, 1.], [0.1, 0.5, 0.9]],
+                           [[1., 0.75, 0.5], [0.33, 0.66, 0.1]]], dtype=np.float32)
+        for channels, max_res in ((13, 16), (30, 3)):
+            for dtype in ("float32", "float16"):
+                with self.subTest(channels=channels, max_res=max_res, dtype=dtype):
+                    reference = self.torch_v1(channels, max_res=max_res)
+                    candidate = self.mlx_v1(channels, max_res=max_res)
+                    ref_input = torch.from_numpy(values).to(getattr(torch, dtype))
+                    actual = candidate(mx.array(values).astype(getattr(mx, dtype)))
+                    mx.eval(actual)
+                    expected = reference(ref_input).detach().numpy()
+                    self.assertEqual(tuple(actual.shape), tuple(expected.shape))
+                    self.assertEqual(actual.dtype, mx.float32)
+                    np.testing.assert_allclose(np.array(actual), expected, rtol=1e-4, atol=1e-5)
+
+    def test_decoder_positions_across_padding_and_input_dtypes(self):
+        mx, np, torch = self.mx, self.np, self.torch
+        values = np.array([[0., 0.25, 1.], [0.125, 0.5, 0.75]], dtype=np.float32)
+        for channels in (12, 13, 30, 31):
+            for dtype in ("float32", "float16"):
+                with self.subTest(channels=channels, dtype=dtype):
+                    reference = self.torch_v2(channels, max_res=3)
+                    candidate = self.mlx_v2(channels, max_res=3)
+                    ref_input = torch.from_numpy(values).to(getattr(torch, dtype))
+                    actual = candidate(mx.array(values).astype(getattr(mx, dtype)))
+                    mx.eval(actual)
+                    expected = reference(ref_input).detach().float().numpy()
+                    self.assertEqual(tuple(actual.shape), tuple(expected.shape))
+                    self.assertEqual(actual.dtype, getattr(mx, dtype))
+                    np.testing.assert_allclose(np.array(actual).astype(np.float32), expected,
+                                               rtol=1e-4 if dtype == "float32" else 3e-3,
+                                               atol=1e-5 if dtype == "float32" else 3e-3)
