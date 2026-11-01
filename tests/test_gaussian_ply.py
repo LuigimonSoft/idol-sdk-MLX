@@ -65,6 +65,30 @@ class GaussianPlyTests(unittest.TestCase):
             np.testing.assert_allclose([actual["vertex"][name][0] for name in ("rot_0", "rot_1", "rot_2", "rot_3")],
                                        [np.sqrt(0.5), np.sqrt(0.5), 0, 0], atol=1e-6)
 
+    def test_binary_layout_with_known_values_without_ply_reader(self):
+        import math
+        import struct
+
+        mx = self.mx
+        attrs = {"xyz": mx.array([[[1.0, 2.0, 3.0]]]),
+                 "features_dc": mx.array([[[[-1.0, 0.0, 1.0]]]]),
+                 "scaling": mx.array([[[1.0, math.e, math.e**2]]]),
+                 "rotation": mx.array([[[1.0, 0.0, 0.0, 0.0]]]),
+                 "opacity": mx.array([[[0.5]]])}
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "known.ply"
+            self.save(path, attrs)
+            header, payload = path.read_bytes().split(b"end_header\n", 1)
+        self.assertIn(b"format binary_little_endian 1.0\n", header)
+        self.assertIn(b"element vertex 1\n", header)
+        self.assertEqual(len(payload), 17 * 4)
+        actual = struct.unpack("<17f", payload)
+        expected = (1, -3, 2, 0, 0, 0, -1, 0, 1, 0, 0, 1, 2,
+                    math.sqrt(0.5), math.sqrt(0.5), 0, 0)
+        for index, (value, reference) in enumerate(zip(actual, expected)):
+            with self.subTest(field=index):
+                self.assertAlmostEqual(value, reference, places=6)
+
     def test_attribute_conversion_to_ply_matches_reference(self):
         from idol.models.decoder import GaussianFixedlenDecoder
         from idol_mlx.gaussian_attributes import decode_gaussian_attributes

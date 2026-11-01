@@ -30,7 +30,9 @@ no RGB conversion or additional quaternion normalization is applied.
 
 Automated tests compare every field with the upstream PyTorch exporter for
 synthetic data on CPU and Metal, including the attribute-conversion-to-PLY path,
-axis rotation, clamping, empty output and exclusive creation. A 1500-Gaussian
+axis rotation, clamping, empty output and exclusive creation. A separate test
+decodes known binary values with Python's standard library independently of the
+PLY reader. A 1500-Gaussian
 synthetic colored sphere exported by this function was also opened and rendered
 locally in the [antimatter15/splat viewer](https://github.com/antimatter15/splat/tree/ba182b51b7c2ad5738cdd6741cd63336d27470fb)
 at commit `ba182b51b7c2ad5738cdd6741cd63336d27470fb`, served on localhost in

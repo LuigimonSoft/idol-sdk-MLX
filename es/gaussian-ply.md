@@ -31,7 +31,9 @@ conversión a RGB ni una normalización adicional de cuaterniones.
 
 Las pruebas automáticas comparan cada campo con el exportador PyTorch original
 para datos sintéticos en CPU y Metal, incluido el flujo de atributos a PLY,
-rotación de ejes, límites, archivo vacío y creación exclusiva. También se abrió
+rotación de ejes, límites, archivo vacío y creación exclusiva. Otra prueba
+decodifica valores binarios conocidos con la biblioteca estándar de Python,
+independientemente del lector PLY. También se abrió
 y renderizó localmente una esfera coloreada sintética de 1500 gaussianas en el
 [visor antimatter15/splat](https://github.com/antimatter15/splat/tree/ba182b51b7c2ad5738cdd6741cd63336d27470fb),
 commit `ba182b51b7c2ad5738cdd6741cd63336d27470fb`, servido en localhost en el
