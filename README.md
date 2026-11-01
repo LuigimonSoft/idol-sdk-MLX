@@ -28,6 +28,7 @@ below to perform inference.
 - A preliminary Euler sampler with optional classifier-free guidance and synthetic parity checks.
 - Explicit seeded MLX noise generation and per-step synthetic trajectory checks.
 - MLX camera-latent decoding to the upstream JSON-compatible fields.
+- Preliminary octree traversal and anchor sampling with controlled MLX randomness.
 - A systematic octree resampling primitive with explicit random offsets.
 - A preliminary FP32 octree probability network and strict checkpoint mapping,
   tested against synthetic reference weights and reduced trained-checkpoint scenarios.
@@ -85,6 +86,8 @@ compliance with their separate licenses. See
 private images or model weights.
 
 ## Documentation
+
+- [Octree anchor sampling](docs/octree-traversal.md)
 
 - [Octree systematic resampling](docs/octree-resampling.md)
 

@@ -37,6 +37,5 @@ Tests compare controlled offsets against the upstream PyTorch implementation,
 including boundary offsets, zero/negative/unnormalized rows, varied counts and
 batches. A 4096-row test checks independent offsets, exact reference counts and
 empirical frequencies. CI executes these tests with MLX CPU; they have also run
-locally with Metal. This is only the allocation primitive: variable-size tree
-traversal, leaf jitter, full anchor counts and end-to-end inference remain work
-for issue #32.
+locally with Metal. This is the allocation primitive; see [octree traversal](octree-traversal.md)
+for the preliminary anchor sampler and its limitations.

@@ -38,7 +38,5 @@ Las pruebas comparan desplazamientos controlados con PyTorch original, incluidos
 límites, filas cero/negativas/no normalizadas, conteos variados y lotes. Una
 prueba de 4096 filas comprueba desplazamientos independientes, conteos exactos
 frente a la referencia y frecuencias empíricas. CI ejecuta las pruebas con MLX
-CPU; también se ejecutaron localmente con Metal. Esta es solo la primitiva de
-distribución: faltan el recorrido del árbol de tamaño variable, posiciones
-aleatorias dentro de hojas, conteo completo de anclas e inferencia integral
-para el issue #32.
+CPU; también se ejecutaron localmente con Metal. Esta es la primitiva de distribución; consulta el [recorrido octree](octree-traversal.md)
+para el muestreador preliminar de anclas y sus limitaciones.
