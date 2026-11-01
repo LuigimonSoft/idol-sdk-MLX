@@ -147,7 +147,7 @@ class DenoiserParityTests(unittest.TestCase):
             self.save_file({name: value.detach().contiguous() for name, value in reference.state_dict().items()},
                            str(checkpoint_path))
             report = compare_checkpoint(config_path, checkpoint_path, tokens=3, context_tokens=2)
-            self.assertEqual(set(report["comparisons"]), {"position", "latent", "camera"})
+            self.assertEqual(set(report["comparisons"]), {"position", "position_shared_frequencies", "latent", "camera"})
             self.assertTrue(all(value["passed"] for value in report["comparisons"].values()), report)
             self.assertEqual(report["comparisons"]["latent"]["count"], 12)
             with self.assertRaises(ValueError):
