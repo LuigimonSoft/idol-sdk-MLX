@@ -35,7 +35,8 @@ arrays por lote con valores equivalentes por elemento. Un cuaternión cero antes
 de normalizar permanece en cero, igual que en la referencia. Los desplazamientos
 de posición no se recortan y la sigmoide puede saturarse en 0 o 1. Las entradas
 deben ser arrays MLX FP32 no vacíos y de formas compatibles; se validan sesgos
-y formas de buffers. Esta función no exporta PLY ni rota coordenadas a eje y.
+y formas de buffers. Esta función no exporta PLY ni rota coordenadas a eje y;
+para ello usa el [exportador PLY](gaussian-ply.md) por separado.
 
 Las pruebas sintéticas comparan los cinco atributos con PyTorch en CPU y Metal,
 incluidos varios lotes y cantidades por ancla, cuaterniones degenerados, color

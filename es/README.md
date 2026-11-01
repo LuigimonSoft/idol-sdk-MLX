@@ -28,6 +28,7 @@ indicada a continuación no realiza inferencia.
 - Un sampler Euler preliminar con guía classifier-free opcional y pruebas sintéticas.
 - Ruido MLX con semilla y comparaciones sintéticas de trayectoria por paso.
 - Decodificación MLX del latente de cámara a los campos compatibles con JSON del SDK original.
+- Exportación binaria PLY 3DGS con las convenciones originales de coordenadas y atributos.
 - Conversión FP32 de atributos gaussianos según las convenciones originales de posición, escala, rotación, opacidad y SH.
 - Decoder FP32 preliminar de características gaussianas con carga estricta;
   algunos casos reducidos con pesos entrenados aún fallan las tolerancias en Metal;
@@ -93,6 +94,8 @@ el cumplimiento de sus licencias respectivas. Consulta
 imágenes privadas ni pesos al repositorio.
 
 ## Documentación
+
+- [Exportación PLY de gaussianas](gaussian-ply.md)
 
 - [Conversión de atributos gaussianos](gaussian-attributes.md)
 
