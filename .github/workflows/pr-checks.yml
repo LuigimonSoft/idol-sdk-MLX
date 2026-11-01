@@ -46,7 +46,7 @@ jobs:
           python -m unittest discover -s tests -v
       - name: Install MLX for backend parity tests
         run: uv pip install --system 'mlx==0.32.3'
-      - name: Compare normalization layers with PyTorch on CPU
+      - name: Compare shared layers with PyTorch on CPU
         env:
           IDOL_REFERENCE_SOURCE: ${{ github.workspace }}/reference-upstream
           IDOL_TEST_MLX_DEVICE: cpu
