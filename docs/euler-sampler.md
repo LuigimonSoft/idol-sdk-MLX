@@ -13,8 +13,10 @@ the sampler generates no random values and leaves MLX evaluation lazy.
 This API does **not** apply classifier-free guidance or implement batched
 conditional/unconditional inference; those remain separate work. The caller must
 provide a compatible model, tensors and condition. `steps` must be a positive
-integer and `rescale_t` finite and positive; shifts too small for the underlying
-floating-point calculation are rejected.
+integer and `rescale_t` finite and positive. The equivalent denominator form
+`(1-t) + rescale_t*t` avoids cancellation near the start of the grid. For very
+small shifts, this intentionally preserves the mathematical endpoint even where
+the upstream floating-point expression loses accuracy.
 
 Synthetic FP32 tests compare time grids and full outputs with upstream PyTorch
 using constant and time/sample-dependent toy velocities, multiple steps, shifts
