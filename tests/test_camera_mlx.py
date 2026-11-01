@@ -11,6 +11,16 @@ import unittest
 
 @unittest.skipUnless(importlib.util.find_spec("mlx"), "MLX is required")
 class CameraTests(unittest.TestCase):
+    def setUp(self):
+        import mlx.core as mx
+
+        device = os.environ.get("IDOL_TEST_MLX_DEVICE", "cpu")
+        if device not in ("cpu", "gpu"):
+            raise ValueError("IDOL_TEST_MLX_DEVICE must be cpu or gpu")
+        previous_device = mx.default_device()
+        mx.set_default_device(mx.gpu if device == "gpu" else mx.cpu)
+        self.addCleanup(mx.set_default_device, previous_device)
+
     def test_known_perspective_and_orthographic_outputs_are_json_serializable(self):
         import mlx.core as mx
         from idol_mlx.camera import decode_camera
