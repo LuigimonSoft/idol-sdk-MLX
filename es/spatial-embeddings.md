@@ -7,7 +7,7 @@ Los dos embeddings de coordenadas de `idol_mlx.layers` reproducen el
 
 - `PcdAbsolutePositionEmbedder` codifica coordenadas por token usando las
   frecuencias de potencias de dos del denoiser, incluida la regla de frecuencias
-  extendidas y salida FP32.
+  extendidas; las entradas FP32/FP16 probadas producen salida FP32.
 - `PcdAbsolutePositionEmbedderv2` codifica coordenadas por muestra usando las
   frecuencias logarítmicas del decodificador y el tipo de entrada.
 
