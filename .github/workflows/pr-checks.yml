@@ -56,6 +56,11 @@ jobs:
           IDOL_REFERENCE_SOURCE: ${{ github.workspace }}/reference-upstream
           IDOL_TEST_MLX_DEVICE: cpu
         run: python -m unittest discover -s tests -p 'test_sampler_mlx.py' -v
+      - name: Compare camera decoding with PyTorch on CPU
+        env:
+          IDOL_REFERENCE_SOURCE: ${{ github.workspace }}/reference-upstream
+          IDOL_TEST_MLX_DEVICE: cpu
+        run: python -m unittest discover -s tests -p 'test_camera_mlx.py' -v
       - name: Compare synthetic denoiser with PyTorch on CPU
         env:
           IDOL_REFERENCE_SOURCE: ${{ github.workspace }}/reference-upstream
