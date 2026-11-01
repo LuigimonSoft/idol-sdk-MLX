@@ -26,7 +26,8 @@ This preliminary network is not a full octree sampler or an end-to-end decoder.
 The strictly loaded `decoder.safetensors` (60 FP32 tensors) from
 [`speridlabs/idol` revision `2731c2291fc65a797c5cb627a5e5526fc1490902`](https://huggingface.co/speridlabs/idol/tree/2731c2291fc65a797c5cb627a5e5526fc1490902)
 was compared with the reference explicitly run in FP32. On an Apple M4, MLX
-0.32.3, PyTorch 2.15.0 and Python 3.12, using batch 1, 8 synthetic cells,
+0.32.3, PyTorch 2.15.0 and Python 3.12. The same results were reproduced
+with supported Python 3.13.14. Using batch 1, 8 synthetic cells,
 4 condition tokens, seed 2026 and level 4, the provisional tolerances
 `atol=2e-5, rtol=2e-4` **did not pass**:
 
@@ -38,8 +39,8 @@ was compared with the reference explicitly run in FP32. On an Apple M4, MLX
 The spatial embedding already differs for this input, before the network
 blocks; this observation does not establish the cause of the final discrepancy.
 Investigating trained-checkpoint parity remains open. No trained weights or
-inputs are included in the repository. The supported package targets Python
-3.13; these measurements used a temporary Python 3.12 environment.
+inputs are included in the repository. Both Python versions were tested in
+temporary environments.
 
 To reproduce with the pinned upstream checkout on `PYTHONPATH` and trusted
 local files, run the command below; use `--device cpu` for MLX CPU. Exit 0 means

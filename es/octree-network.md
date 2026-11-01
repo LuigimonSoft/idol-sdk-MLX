@@ -27,7 +27,8 @@ un decodificador integral.
 Se cargó estrictamente `decoder.safetensors` (60 tensores FP32) de
 [`speridlabs/idol` revisión `2731c2291fc65a797c5cb627a5e5526fc1490902`](https://huggingface.co/speridlabs/idol/tree/2731c2291fc65a797c5cb627a5e5526fc1490902)
 y se comparó con la referencia ejecutada explícitamente en FP32. En un Apple
-M4, MLX 0.32.3, PyTorch 2.15.0 y Python 3.12, con lote 1, 8 celdas sintéticas,
+M4, MLX 0.32.3, PyTorch 2.15.0 y Python 3.12. Los mismos resultados se
+reprodujeron con la versión compatible Python 3.13.14. Con lote 1, 8 celdas sintéticas,
 4 tokens de condición, semilla 2026 y nivel 4, **no se cumplieron** las
 tolerancias provisionales `atol=2e-5, rtol=2e-4`:
 
@@ -39,8 +40,8 @@ tolerancias provisionales `atol=2e-5, rtol=2e-4`:
 El embedding espacial ya difiere para esta entrada, antes de los bloques de la
 red; esto no demuestra la causa de la discrepancia final. La investigación de
 paridad con pesos entrenados sigue pendiente. No se incluyen pesos ni entradas
-en el repositorio. El paquete admite Python 3.13; estas mediciones usaron un
-entorno temporal con Python 3.12.
+en el repositorio. Ambas versiones de Python se probaron en entornos
+temporales.
 
 Para reproducirlo, con el SDK original fijado en `PYTHONPATH` y archivos
 locales confiables, ejecuta el comando siguiente; usa `--device cpu` para MLX
