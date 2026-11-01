@@ -27,6 +27,7 @@ below to perform inference.
 - Preliminary unified and decoder transformer blocks with synthetic FP32 parity checks.
 - A preliminary Euler sampler with optional classifier-free guidance and synthetic parity checks.
 - Explicit seeded MLX noise generation and per-step synthetic trajectory checks.
+- MLX camera-latent decoding to the upstream JSON-compatible fields.
 - A preliminary FP32 denoiser and strict checkpoint mapping. A reduced
   trained-weight diagnostic passes provisional tolerances for several reduced FP32 inputs.
 - A preliminary file-based parity comparison tool with explicit tolerances.
@@ -81,6 +82,8 @@ compliance with their separate licenses. See
 private images or model weights.
 
 ## Documentation
+
+- [Camera decoding](docs/camera-decoding.md)
 
 - [Upstream architecture and tensor map](docs/architecture.md)
 - [Proposed MLX architecture](docs/mlx-architecture.md)

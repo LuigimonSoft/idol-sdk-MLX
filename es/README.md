@@ -27,6 +27,7 @@ indicada a continuación no realiza inferencia.
 - Bloques transformer preliminares unificado y del decodificador con pruebas sintéticas FP32.
 - Un sampler Euler preliminar con guía classifier-free opcional y pruebas sintéticas.
 - Ruido MLX con semilla y comparaciones sintéticas de trayectoria por paso.
+- Decodificación MLX del latente de cámara a los campos compatibles con JSON del SDK original.
 - Un denoiser FP32 preliminar y carga estricta de checkpoints. Un diagnóstico
   reducido con pesos entrenados supera las tolerancias provisionales para varias entradas FP32.
 - Una herramienta preliminar de comparación de archivos con tolerancias explícitas.
@@ -83,6 +84,8 @@ el cumplimiento de sus licencias respectivas. Consulta
 imágenes privadas ni pesos al repositorio.
 
 ## Documentación
+
+- [Decodificación de cámara](camera-decoding.md)
 
 - [Arquitectura y tensores del original](architecture.md)
 - [Arquitectura MLX propuesta](mlx-architecture.md)
