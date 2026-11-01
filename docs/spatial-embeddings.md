@@ -7,7 +7,7 @@ The two point-coordinate embeddings in `idol_mlx.layers` reproduce the
 
 - `PcdAbsolutePositionEmbedder` embeds coordinates per token with the
   denoiser's power-of-two frequency schedule, including its extended-frequency
-  rule and FP32 output.
+  rule; FP32/FP16 inputs produce FP32 output in the tested cases.
 - `PcdAbsolutePositionEmbedderv2` embeds coordinates per sample using the
   decoder's evenly spaced log frequencies and input dtype.
 
