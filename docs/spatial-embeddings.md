@@ -12,8 +12,15 @@ The two point-coordinate embeddings in `idol_mlx.layers` reproduce the
   decoder's evenly spaced log frequencies and input dtype.
 
 Both concatenate sine/cosine features in upstream order and pad to the requested
-channel count when required. Frequencies are derived from configuration at each
-call; no learned parameters or checkpoint loading are introduced.
+channel count when required. For `freq_dim=170, max_res=16`, the schedule is a
+canonical FP32 constant generated from the pinned upstream position embedder on
+PyTorch 2.15.0 CPU; it contains no checkpoint data. This avoids backend-specific
+rounding differences that are amplified by high-frequency trigonometry. Other
+configurations use the general MLX calculation. No learned parameters, PyTorch
+inference dependency or checkpoint loading are introduced. The canonical values
+can be reproduced with `PcdAbsolutePositionEmbedder(1024, in_channels=3,
+max_res=16).freqs` in the pinned reference environment; the regression test
+checks every value exactly.
 
 Synthetic PyTorch parity tests use shared coordinates. V1 covers batches of
 multiple tokens, padding, extended frequencies and FP32/FP16 inputs, with

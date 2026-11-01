@@ -5,6 +5,8 @@ import math
 import mlx.core as mx
 import mlx.nn as nn
 
+from ._position_frequencies import CANONICAL_POSITION_FREQUENCIES
+
 
 class LayerNorm32(nn.LayerNorm):
     """Normalize in FP32, then restore the input dtype, as in upstream Idol."""
@@ -91,12 +93,15 @@ class PcdAbsolutePositionEmbedder(nn.Module):
         self.freq_dim = channels // in_channels // 2
 
     def __call__(self, x):
-        exponents = mx.arange(self.max_res, dtype=mx.float32)
-        remaining = max(0, self.freq_dim - self.max_res)
-        if remaining:
-            tail = mx.arange(remaining, dtype=mx.float32) / remaining * self.max_res
-            exponents = mx.concatenate([exponents, tail])
-        frequencies = mx.power(2.0, exponents[:self.freq_dim])
+        if self.freq_dim == 170 and self.max_res == 16:
+            frequencies = mx.array(CANONICAL_POSITION_FREQUENCIES, dtype=mx.float32)
+        else:
+            exponents = mx.arange(self.max_res, dtype=mx.float32)
+            remaining = max(0, self.freq_dim - self.max_res)
+            if remaining:
+                tail = mx.arange(remaining, dtype=mx.float32) / remaining * self.max_res
+                exponents = mx.concatenate([exponents, tail])
+            frequencies = mx.power(2.0, exponents[:self.freq_dim])
         angles = mx.outer(x.reshape(-1), frequencies) * 2 * math.pi
         embedding = mx.concatenate([mx.sin(angles), mx.cos(angles)], axis=-1)
         embedding = embedding.reshape(*x.shape[:-1], -1)
