@@ -109,6 +109,8 @@ class FeedForwardParityTests(unittest.TestCase):
         for index, layer in enumerate(reference.mlp):
             if isinstance(layer, torch.nn.Linear):
                 target = candidate.mlp.layers[index]
+                self.assertEqual(tuple(target.weight.shape), tuple(layer.weight.shape))
+                self.assertEqual(tuple(target.bias.shape), tuple(layer.bias.shape))
                 target.weight = mx.array(layer.weight.detach().float().numpy()).astype(getattr(mx, dtype))
                 target.bias = mx.array(layer.bias.detach().float().numpy()).astype(getattr(mx, dtype))
         values = np.linspace(-3, 3, 24, dtype=np.float32).reshape(2, 3, 4)
@@ -133,5 +135,7 @@ class FeedForwardParityTests(unittest.TestCase):
         for layers in (1, 2, 3):
             for dtype in ("float32", "float16"):
                 with self.subTest(layers=layers, dtype=dtype):
-                    self.compare_models(self.torch_mlp(4, 4 if layers == 1 else 6, 3, layers),
-                                        self.mlx_mlp(4, 4 if layers == 1 else 6, 3, layers), dtype)
+                    channels = 7 if layers == 1 else 4
+                    inner = 4 if layers == 1 else 6
+                    self.compare_models(self.torch_mlp(channels, inner, 3, layers),
+                                        self.mlx_mlp(channels, inner, 3, layers), dtype)
