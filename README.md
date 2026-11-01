@@ -28,6 +28,7 @@ below to perform inference.
 - A preliminary Euler sampler with optional classifier-free guidance and synthetic parity checks.
 - Explicit seeded MLX noise generation and per-step synthetic trajectory checks.
 - MLX camera-latent decoding to the upstream JSON-compatible fields.
+- FP32 Gaussian attribute conversion using the upstream position, scale, rotation, opacity and SH conventions.
 - A preliminary FP32 Gaussian feature decoder with strict checkpoint mapping;
   some reduced trained-weight Metal cases still fail provisional tolerances;
   optional diagnostics compare block outputs and attention implementations.
@@ -89,6 +90,8 @@ compliance with their separate licenses. See
 private images or model weights.
 
 ## Documentation
+
+- [Gaussian attribute conversion](docs/gaussian-attributes.md)
 
 - [Gaussian feature decoder](docs/gaussian-decoder.md)
 

@@ -6,8 +6,9 @@
 forward path of the [pinned upstream Gaussian decoder](https://github.com/speridlabs/idol-sdk/blob/4702a7f00850e34b6e83a2170cc123c3e9570744/idol/models/decoder.py).
 It takes anchor coordinates `[B, L, 3]` and conditioning `[B, Lc, C]`, and
 returns raw features `[B, L, num_gaussians * 15]`. Conversion of these features
-into position, scale, rotation, opacity and color remains separate work in
-issue #31; these raw features are not yet a renderable 3D representation.
+into position, scale, rotation, opacity and color is provided separately by
+[Gaussian attribute conversion](gaussian-attributes.md); raw features alone
+are not a renderable 3D representation.
 
 `idol_mlx.gaussian_weights.load_gaussian_checkpoint` strictly validates the
 complete upstream-named FP32 safetensors schema before changing the model,

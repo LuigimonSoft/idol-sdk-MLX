@@ -28,6 +28,7 @@ indicada a continuación no realiza inferencia.
 - Un sampler Euler preliminar con guía classifier-free opcional y pruebas sintéticas.
 - Ruido MLX con semilla y comparaciones sintéticas de trayectoria por paso.
 - Decodificación MLX del latente de cámara a los campos compatibles con JSON del SDK original.
+- Conversión FP32 de atributos gaussianos según las convenciones originales de posición, escala, rotación, opacidad y SH.
 - Decoder FP32 preliminar de características gaussianas con carga estricta;
   algunos casos reducidos con pesos entrenados aún fallan las tolerancias en Metal;
   hay diagnósticos opcionales de bloques y atención.
@@ -92,6 +93,8 @@ el cumplimiento de sus licencias respectivas. Consulta
 imágenes privadas ni pesos al repositorio.
 
 ## Documentación
+
+- [Conversión de atributos gaussianos](gaussian-attributes.md)
 
 - [Decoder de características gaussianas](gaussian-decoder.md)
 

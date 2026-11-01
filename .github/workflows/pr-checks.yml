@@ -71,6 +71,11 @@ jobs:
           IDOL_REFERENCE_SOURCE: ${{ github.workspace }}/reference-upstream
           IDOL_TEST_MLX_DEVICE: cpu
         run: python -m unittest discover -s tests -p 'test_octree_traversal.py' -v
+      - name: Compare Gaussian attributes with PyTorch on CPU
+        env:
+          IDOL_REFERENCE_SOURCE: ${{ github.workspace }}/reference-upstream
+          IDOL_TEST_MLX_DEVICE: cpu
+        run: python -m unittest discover -s tests -p 'test_gaussian_attributes.py' -v
       - name: Compare synthetic Gaussian decoder with PyTorch on CPU
         env:
           IDOL_REFERENCE_SOURCE: ${{ github.workspace }}/reference-upstream

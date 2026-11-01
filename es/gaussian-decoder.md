@@ -6,8 +6,9 @@
 características del [decoder gaussiano original fijado](https://github.com/speridlabs/idol-sdk/blob/4702a7f00850e34b6e83a2170cc123c3e9570744/idol/models/decoder.py).
 Recibe anclas `[B, L, 3]` y condiciones `[B, Lc, C]`, y devuelve características
 sin procesar `[B, L, num_gaussians * 15]`. La conversión a posición, escala,
-rotación, opacidad y color es trabajo separado del issue #31; estas
-características todavía no son una representación 3D renderizable.
+rotación, opacidad y color se proporciona por separado en la [conversión de
+atributos gaussianos](gaussian-attributes.md); estas características sin
+procesar no son una representación 3D renderizable.
 
 `idol_mlx.gaussian_weights.load_gaussian_checkpoint` valida estrictamente el
 esquema completo FP32 con nombres originales antes de modificar el modelo,
