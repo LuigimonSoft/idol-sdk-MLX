@@ -39,6 +39,32 @@ y no se ampliaron las tolerancias. Estas entradas reducidas no validan conteos
 completos de anclas, conversión de atributos, precisión mixta ni inferencia
 integral. No se publicaron pesos ni entradas.
 
+## Diagnósticos de atención y bloques
+
+Un diagnóstico reducido opcional compara las salidas intermedias por bloque y
+ejecuta otra pasada con multiplicaciones FP32 explícitas y
+`mx.softmax(..., precise=True)` en lugar de la atención fusionada de MLX. Para
+la entrada de 32 anclas / 8 tokens / semilla 42, el primer bloque con valores
+fuera de la misma tolerancia provisional es el bloque **3** en Metal y el
+bloque **6** en CPU (índices desde cero). Estas comparaciones son diagnósticas,
+no criterios de aceptación independientes; los fallos pueden desaparecer tras
+las capas posteriores. El primer bloque que falla puede contener errores
+acumulados antes; no demuestra que ese bloque sea la causa.
+
+| Escenario Metal (anclas / tokens / semilla) | Fallos fusionada | Fallos explícita | Error máximo fusionada | Error máximo explícita |
+| --- | ---: | ---: | ---: | ---: |
+| 32 / 8 / 42 | 6 / 15360 | 0 / 15360 | 5.25117e-5 | 3.05176e-5 |
+| 64 / 16 / 123 | 35 / 30720 | 26 / 30720 | 3.70026e-4 | 3.49045e-4 |
+
+El cálculo explícito mejora estos casos pero no resuelve el segundo, ni demuestra
+una solución general o la única causa. Materializa las puntuaciones de atención
+y puede requerir memoria cuadrática. El diagnóstico se limita a 256 anclas y
+256 tokens; modifica temporalmente la función de atención en todo el proceso y
+no debe ejecutarse junto con otro trabajo MLX en el mismo proceso. La inferencia
+de producción sigue usando la atención fusionada. El código de salida del
+comando sigue dependiendo solo de las comparaciones originales de posición y
+características fusionadas, no de las métricas diagnósticas opcionales.
+
 ## Reproducir
 
 Con el SDK original fijado en `PYTHONPATH`, usa configuración y pesos locales
@@ -52,4 +78,7 @@ PYTHONPATH=../idol-sdk-reference .venv-reference/bin/python -m scripts.validate_
   --anchors 32 --context-tokens 8 --seed 42 --device gpu
 ```
 
-Usa `--device cpu` para MLX CPU. CI no necesita el checkpoint entrenado.
+Usa `--device cpu` para MLX CPU. Agrega `--trace-blocks --compare-attention`
+para las métricas diagnósticas opcionales; estas opciones no cambian el modelo
+de producción ni los criterios de salida del comando. CI no necesita el
+checkpoint entrenado.

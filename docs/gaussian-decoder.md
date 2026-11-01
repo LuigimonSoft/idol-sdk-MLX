@@ -40,6 +40,32 @@ tolerances have not been increased. These reduced inputs do not validate full
 anchor counts, attribute conversion, mixed precision or end-to-end inference.
 No weights or inputs were committed.
 
+## Attention and block diagnostics
+
+An optional reduced diagnostic compares intermediate block outputs and runs an
+additional forward pass with explicit FP32 matrix multiplications and
+`mx.softmax(..., precise=True)` instead of fused MLX attention. For the
+32-anchor / 8-context / seed-42 input, the first block whose elements exceed
+the same provisional tolerance is block **3** on Metal and block **6** on
+CPU (zero-based). These block checks are diagnostic only; they are not separate
+acceptance criteria, and failures can disappear after later layers. The first
+failing block can include errors accumulated earlier; it is not proof that the
+block itself caused the discrepancy.
+
+| Metal scenario (anchors / context / seed) | Fused failed values | Explicit failed values | Fused max error | Explicit max error |
+| --- | ---: | ---: | ---: | ---: |
+| 32 / 8 / 42 | 6 / 15360 | 0 / 15360 | 5.25117e-5 | 3.05176e-5 |
+| 64 / 16 / 123 | 35 / 30720 | 26 / 30720 | 3.70026e-4 | 3.49045e-4 |
+
+The explicit calculation improves these cases but does not resolve the second
+one, and does not establish a general fix or the sole cause. It materializes
+attention scores and can require quadratic memory. The diagnostic is limited
+to at most 256 anchors and 256 condition tokens; it temporarily patches the
+attention function process-wide and must not run concurrently with other MLX
+work in the same process. Production inference continues to use fused attention.
+The command's exit status remains based only on the original position and
+fused-feature comparisons, not optional diagnostic metrics.
+
 ## Reproduce
 
 With the pinned upstream SDK on `PYTHONPATH`, use trusted local configuration
@@ -53,4 +79,6 @@ PYTHONPATH=../idol-sdk-reference .venv-reference/bin/python -m scripts.validate_
   --anchors 32 --context-tokens 8 --seed 42 --device gpu
 ```
 
-Use `--device cpu` for MLX CPU. The trained checkpoint is not needed by CI.
+Use `--device cpu` for MLX CPU. Add `--trace-blocks --compare-attention` for
+the optional diagnostic metrics; these flags do not change the production model
+or command exit criteria. The trained checkpoint is not needed by CI.
