@@ -139,3 +139,52 @@ class FeedForwardParityTests(unittest.TestCase):
                     inner = 4 if layers == 1 else 6
                     self.compare_models(self.torch_mlp(channels, inner, 3, layers),
                                         self.mlx_mlp(channels, inner, 3, layers), dtype)
+
+
+@unittest.skipUnless(importlib.util.find_spec("mlx") and os.environ.get("IDOL_REFERENCE_SOURCE"),
+                     "MLX and pinned reference source are required")
+class SinusoidalEmbedderParityTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import mlx.core as mx
+        import numpy as np
+        import torch
+        from idol_mlx.layers import SinusoidalEmbedder
+
+        sys.path.insert(0, str(Path(os.environ["IDOL_REFERENCE_SOURCE"]).resolve()))
+        from idol.models.layers import SinusoidalEmbedder as TorchSinusoidalEmbedder
+
+        cls.mx, cls.np, cls.torch = mx, np, torch
+        cls.mlx_embedder, cls.torch_embedder = SinusoidalEmbedder, TorchSinusoidalEmbedder
+        cls.previous_device = mx.default_device()
+        device = os.environ.get("IDOL_TEST_MLX_DEVICE", "cpu")
+        if device not in ("cpu", "gpu"):
+            raise ValueError("IDOL_TEST_MLX_DEVICE must be cpu or gpu")
+        mx.set_default_device(mx.gpu if device == "gpu" else mx.cpu)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.mx.set_default_device(cls.previous_device)
+
+    def test_temporal_embeddings_match_reference_with_identical_parameters(self):
+        mx, np, torch = self.mx, self.np, self.torch
+        torch.manual_seed(73)
+        for size, period, two_pi in ((8, 10000, False), (10, 100, True)):
+            for dtype in ("float32", "float16"):
+                with self.subTest(size=size, period=period, two_pi=two_pi, dtype=dtype):
+                    reference = self.torch_embedder(6, size, period, two_pi).eval()
+                    candidate = self.mlx_embedder(6, size, period, two_pi)
+                    for index in (0, 2):
+                        source, target = reference.mlp[index], candidate.mlp.layers[index]
+                        self.assertEqual(tuple(target.weight.shape), tuple(source.weight.shape))
+                        self.assertEqual(tuple(target.bias.shape), tuple(source.bias.shape))
+                        target.weight = mx.array(source.weight.detach().numpy())
+                        target.bias = mx.array(source.bias.detach().numpy())
+                    times = np.array([-1.0, 0.0, 0.5, 1.0, 3.0], dtype=np.float32)
+                    reference_t = torch.from_numpy(times).to(getattr(torch, dtype))
+                    actual = candidate(mx.array(times).astype(getattr(mx, dtype)))
+                    mx.eval(actual)
+                    expected = reference(reference_t).detach().numpy()
+                    self.assertEqual(tuple(actual.shape), (5, 6))
+                    self.assertEqual(actual.dtype, mx.float32)
+                    np.testing.assert_allclose(np.array(actual), expected, rtol=1e-4, atol=1e-5)
