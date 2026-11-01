@@ -24,8 +24,11 @@ PyTorch 2.15.0, con tolerancias provisionales `atol=2e-5, rtol=2e-4`:
 El embedding de posición difiere antes de los bloques del denoiser. Una
 inspección separada encontró una diferencia absoluta máxima de frecuencias de
 0.00390625 entre PyTorch CPU y MLX Metal, con diferencias en 56 de 170 valores.
-Esto es una posible causa de la diferencia posicional, pero no demuestra que
-sea la única. Desactivar `MLX_ENABLE_TF32` no cambió los errores de salida en
+Al proporcionar directamente a MLX las frecuencias calculadas por PyTorch, el
+error máximo posicional bajó de 0.0312334 a 1.78814e-7 para esta entrada. Esto
+aísla el cálculo de frecuencias como causa principal de esta diferencia
+posicional; no demuestra que se resuelvan todas las diferencias de salida del
+denoiser. Desactivar `MLX_ENABLE_TF32` no cambió los errores de salida en
 este caso. Queda pendiente investigar y corregir las diferencias; no se han
 ampliado las tolerancias para hacer pasar la prueba.
 
@@ -42,7 +45,7 @@ PYTHONPATH=../idol-sdk-reference .venv-reference/bin/python -m scripts.validate_
 
 Usa `--device cpu` para MLX CPU y `--tokens` o `--context-tokens` para elegir
 longitudes reducidas. La salida JSON contiene solo métricas agregadas; el código
-0 indica que las tres comparaciones pasan y el 1 que alguna falla. La herramienta
+0 indica que las cuatro comparaciones pasan y el 1 que alguna falla. La herramienta
 carga el modelo y checkpoint completos, por lo que necesita memoria suficiente.
 No escribe pesos ni entradas. La prueba automatizada usa un checkpoint sintético
 pequeño en CI; no requiere pesos entrenados. No valida memoria a tamaño completo,
