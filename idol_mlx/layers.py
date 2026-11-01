@@ -170,3 +170,36 @@ class RePo3DRotaryEmbedding(nn.Module):
                   for i, freq in enumerate((self.freqs_0, self.freqs_1, self.freqs_2))]
         angles = mx.concatenate(angles, axis=-1)
         return mx.stack([mx.cos(angles), mx.sin(angles)], axis=-1)
+
+
+class MultiHeadAttention(nn.Module):
+    """Decoder self/cross attention with upstream query/key normalization."""
+
+    def __init__(self, channels, num_heads, ctx_channels=None, cross=False):
+        super().__init__()
+        self.num_heads = num_heads
+        self.cross = cross
+        head_dim = channels // num_heads
+        if cross:
+            self.to_q = nn.Linear(channels, channels)
+            self.to_kv = nn.Linear(ctx_channels, channels * 2)
+        else:
+            self.to_qkv = nn.Linear(channels, channels * 3)
+        self.q_rms_norm = MultiHeadRMSNorm(head_dim, num_heads)
+        self.k_rms_norm = MultiHeadRMSNorm(head_dim, num_heads)
+        self.to_out = nn.Linear(channels, channels)
+
+    def __call__(self, x, context=None):
+        batch, length, channels = x.shape
+        if self.cross:
+            q = self.to_q(x).reshape(batch, length, self.num_heads, -1)
+            kv = self.to_kv(context).reshape(batch, context.shape[1], 2, self.num_heads, -1)
+            k, v = kv[:, :, 0], kv[:, :, 1]
+        else:
+            qkv = self.to_qkv(x).reshape(batch, length, 3, self.num_heads, -1)
+            q, k, v = qkv[:, :, 0], qkv[:, :, 1], qkv[:, :, 2]
+        q = self.q_rms_norm(q).transpose(0, 2, 1, 3)
+        k = self.k_rms_norm(k).transpose(0, 2, 1, 3)
+        v = v.transpose(0, 2, 1, 3)
+        output = mx.fast.scaled_dot_product_attention(q, k, v, scale=q.shape[-1] ** -0.5)
+        return self.to_out(output.transpose(0, 2, 1, 3).reshape(batch, length, channels))
