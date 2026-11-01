@@ -73,7 +73,9 @@ IDOL_REFERENCE_SOURCE=../idol-sdk-reference .venv-reference/bin/python -m unitte
 Si `IDOL_REFERENCE_SOURCE` no está definido, se omiten las pruebas que
 dependen del SDK original; una ejecución con pruebas omitidas no constituye una
 validación completa. Las pruebas actuales no demuestran inferencia completa ni
-equivalencia PyTorch/MLX.
+equivalencia PyTorch/MLX. Un [diagnóstico reducido con checkpoint entrenado](dit-trained-validation.md)
+compara las salidas del denoiser con frecuencias nativas y derivadas de la
+referencia; la ruta nativa aún no cumple las tolerancias provisionales.
 
 La futura inferencia completa requiere acceso aprobado a DINOv3 y FLUX.2 dev y
 el cumplimiento de sus licencias respectivas. Consulta
