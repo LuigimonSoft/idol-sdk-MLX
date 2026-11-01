@@ -43,6 +43,19 @@ class SamplerParityTests(unittest.TestCase):
             with self.subTest(steps=steps, shift=shift), self.assertRaises(ValueError):
                 self.time_grid(steps, shift)
 
+    def test_tiny_positive_shift_preserves_endpoints_and_full_integration(self):
+        mx, np = self.mx, self.np
+        for shift in (1e-16, 1e-20):
+            with self.subTest(shift=shift):
+                self.assertEqual(self.time_grid(1, shift), (1.0, 0.0))
+                grid = self.time_grid(4, shift)
+                self.assertEqual((grid[0], grid[-1]), (1.0, 0.0))
+                self.assertTrue(all(a >= b for a, b in zip(grid, grid[1:])))
+                result = self.mlx_sample(lambda sample, time, condition: condition,
+                                         mx.array([[10.0]]), mx.array([[2.0]]), steps=1, rescale_t=shift)
+                mx.eval(result)
+                np.testing.assert_array_equal(np.array(result), np.array([[8.0]], dtype=np.float32))
+
     def test_known_velocity_and_time_dependent_trajectories(self):
         mx, np, torch = self.mx, self.np, self.torch
         noise = np.array([[10., -2.], [3., 7.]], dtype=np.float32)
