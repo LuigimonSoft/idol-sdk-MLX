@@ -26,8 +26,8 @@ inspection found a maximum absolute frequency difference of 0.00390625 between
 PyTorch CPU and MLX Metal, with differences in 56 of 170 frequency values.
 Supplying the PyTorch-computed frequencies directly to MLX reduced maximum
 position error from 0.0312334 to 1.78814e-7 for this input. This isolates
-frequency calculation as the dominant cause of this positional discrepancy;
-the positional discrepancy. A second MLX forward pass now substitutes that
+frequency calculation as the dominant cause of this positional discrepancy.
+A second MLX forward pass now substitutes that
 same reference-derived position embedding, without changing production code.
 For the same reduced input and tolerances, its trained-checkpoint output was:
 
