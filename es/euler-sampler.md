@@ -14,8 +14,10 @@ la evaluación diferida de MLX.
 Esta API **no** aplica classifier-free guidance ni implementa ejecución por
 lotes condicional/incondicional; quedan para otra tarea. Quien llama debe
 proporcionar modelo, tensores y condición compatibles. `steps` debe ser un entero
-positivo y `rescale_t` finito y positivo; se rechazan desplazamientos demasiado
-pequeños para el cálculo de punto flotante.
+positivo y `rescale_t` finito y positivo. La forma equivalente del denominador
+`(1-t) + rescale_t*t` evita cancelación cerca del inicio. Para valores muy
+pequeños preserva el extremo matemático aunque la expresión original pierda
+precisión numérica.
 
 Las pruebas sintéticas FP32 comparan el calendario y las salidas completas con
 PyTorch original usando velocidades constantes y dependientes del tiempo y la
