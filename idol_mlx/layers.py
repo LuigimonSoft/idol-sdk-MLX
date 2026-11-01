@@ -27,3 +27,32 @@ class MultiHeadRMSNorm(nn.Module):
         norm = mx.sqrt(mx.sum(mx.square(value), axis=-1, keepdims=True))
         normalized = value / mx.maximum(norm, 1e-12)
         return (normalized * self.gamma * self.scale).astype(x.dtype)
+
+
+class FeedForwardNet(nn.Module):
+    """Two biased linear layers with the upstream tanh-approximate GELU."""
+
+    def __init__(self, channels, mlp_ratio=4.0):
+        super().__init__()
+        hidden = int(channels * mlp_ratio)
+        self.mlp = nn.Sequential(nn.Linear(channels, hidden), nn.gelu_approx,
+                                 nn.Linear(hidden, channels))
+
+    def __call__(self, x):
+        return self.mlp(x)
+
+
+class MLP(nn.Module):
+    """Upstream MLP layout with tanh-approximate GELU between linear layers."""
+
+    def __init__(self, channels, inner_channels, channels_out, mlp_layer_num=2):
+        super().__init__()
+        layers = []
+        for i in range(mlp_layer_num - 1):
+            layers.append(nn.Linear(channels if i == 0 else inner_channels, inner_channels))
+            layers.append(nn.gelu_approx)
+        layers.append(nn.Linear(inner_channels, channels_out))
+        self.mlp = nn.Sequential(*layers)
+
+    def __call__(self, x):
+        return self.mlp(x)

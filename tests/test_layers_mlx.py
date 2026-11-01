@@ -1,4 +1,4 @@
-"""Cross-backend tests for the selected upstream normalization layers."""
+"""Cross-backend tests for selected upstream shared layers."""
 
 import importlib.util
 import os
@@ -75,3 +75,67 @@ class NormalizationParityTests(unittest.TestCase):
                 np.testing.assert_allclose(np.array(result).astype(np.float32),
                                            ref(x).detach().float().numpy(), rtol=1e-4 if dtype == "float32" else 1e-3,
                                            atol=1e-5 if dtype == "float32" else 1e-3)
+
+
+@unittest.skipUnless(importlib.util.find_spec("mlx") and os.environ.get("IDOL_REFERENCE_SOURCE"),
+                     "MLX and pinned reference source are required")
+class FeedForwardParityTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import mlx.core as mx
+        import numpy as np
+        import torch
+        from idol_mlx.layers import FeedForwardNet, MLP
+
+        sys.path.insert(0, str(Path(os.environ["IDOL_REFERENCE_SOURCE"]).resolve()))
+        from idol.models.layers import FeedForwardNet as TorchFeedForwardNet, MLP as TorchMLP
+
+        cls.mx, cls.np, cls.torch = mx, np, torch
+        cls.mlx_ffn, cls.mlx_mlp = FeedForwardNet, MLP
+        cls.torch_ffn, cls.torch_mlp = TorchFeedForwardNet, TorchMLP
+        cls.previous_device = mx.default_device()
+        device = os.environ.get("IDOL_TEST_MLX_DEVICE", "cpu")
+        if device not in ("cpu", "gpu"):
+            raise ValueError("IDOL_TEST_MLX_DEVICE must be cpu or gpu")
+        mx.set_default_device(mx.gpu if device == "gpu" else mx.cpu)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.mx.set_default_device(cls.previous_device)
+
+    def compare_models(self, reference, candidate, dtype):
+        mx, np, torch = self.mx, self.np, self.torch
+        reference.eval().to(getattr(torch, dtype))
+        for index, layer in enumerate(reference.mlp):
+            if isinstance(layer, torch.nn.Linear):
+                target = candidate.mlp.layers[index]
+                self.assertEqual(tuple(target.weight.shape), tuple(layer.weight.shape))
+                self.assertEqual(tuple(target.bias.shape), tuple(layer.bias.shape))
+                target.weight = mx.array(layer.weight.detach().float().numpy()).astype(getattr(mx, dtype))
+                target.bias = mx.array(layer.bias.detach().float().numpy()).astype(getattr(mx, dtype))
+        values = np.linspace(-3, 3, 24, dtype=np.float32).reshape(2, 3, 4)
+        reference_input = torch.from_numpy(values).to(getattr(torch, dtype))
+        actual = candidate(mx.array(values).astype(getattr(mx, dtype)))
+        mx.eval(actual)
+        self.assertEqual(actual.dtype, getattr(mx, dtype))
+        np.testing.assert_allclose(np.array(actual).astype(np.float32),
+                                   reference(reference_input).detach().float().numpy(),
+                                   rtol=1e-4 if dtype == "float32" else 2e-3,
+                                   atol=1e-5 if dtype == "float32" else 2e-3)
+
+    def test_feed_forward_uses_shared_linear_weights_and_tanh_gelu(self):
+        self.torch.manual_seed(17)
+        for ratio in (1.5, 4.0):
+            for dtype in ("float32", "float16"):
+                with self.subTest(ratio=ratio, dtype=dtype):
+                    self.compare_models(self.torch_ffn(4, ratio), self.mlx_ffn(4, ratio), dtype)
+
+    def test_mlp_single_and_multiple_linear_layers(self):
+        self.torch.manual_seed(23)
+        for layers in (1, 2, 3):
+            for dtype in ("float32", "float16"):
+                with self.subTest(layers=layers, dtype=dtype):
+                    channels = 7 if layers == 1 else 4
+                    inner = 4 if layers == 1 else 6
+                    self.compare_models(self.torch_mlp(channels, inner, 3, layers),
+                                        self.mlx_mlp(channels, inner, 3, layers), dtype)
