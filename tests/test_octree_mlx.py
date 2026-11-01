@@ -118,6 +118,39 @@ class OctreeParityTests(unittest.TestCase):
                 with self.subTest(argument=name), self.assertRaisesRegex(ValueError, name):
                     compare_checkpoint(config_path, path, **{name: -1})
 
+    def test_profile_synthetic_checkpoint_and_validate_inputs(self):
+        import json
+        from scripts.profile_octree import profile_checkpoint
+
+        reference, _ = self.make_models()
+        args = {"model_channels": 24, "cond_channels": 8, "num_blocks": 2,
+                "num_heads": 2, "mlp_ratio": 1.5}
+        config = {"denoiser": {"name": "unused", "args": {}},
+                  "decoder": {"name": "OctreeProbabilityFixedlenDecoder", "args": args},
+                  "decoder_gs": {"name": "unused", "args": {}}, "image_size": 16, "max_voxel_level": 1,
+                  "image_encoders": {"dinov3": "unused", "flux2_vae": "unused"}}
+        with tempfile.TemporaryDirectory() as directory:
+            config_path, checkpoint = Path(directory) / "config.json", Path(directory) / "octree.safetensors"
+            config_path.write_text(json.dumps(config), encoding="utf-8")
+            self.save_file({name: value.detach().contiguous() for name, value in reference.state_dict().items()},
+                           str(checkpoint))
+            for points, level in ((0, 0), (8, 2)):
+                with self.subTest(num_points=points):
+                    result = profile_checkpoint(config_path, checkpoint, num_points=points, level=level,
+                                                context_tokens=2, seed=11)
+                    self.assertTrue(all(result[key] for key in ("shape_ok", "finite", "in_bounds")), result)
+                    self.assertEqual(result["num_points"], points)
+                    self.assertEqual(result["level"], level)
+                    self.assertGreaterEqual(result["seconds"], 0)
+                    self.assertGreater(result["mlx_baseline_bytes"], 0)
+                    self.assertGreaterEqual(result["mlx_peak_bytes"], result["mlx_baseline_bytes"])
+                    self.assertGreater(result["process_peak_rss_bytes"], 0)
+            for name in ("num_points", "level", "context_tokens", "seed"):
+                invalid = dict(num_points=8, level=2, context_tokens=2, seed=11)
+                invalid[name] = -1
+                with self.subTest(argument=name), self.assertRaisesRegex(ValueError, name):
+                    profile_checkpoint(config_path, checkpoint, **invalid)
+
     def test_rejects_non_fp32_target_before_loading(self):
         _, model = self.make_models()
         model.in_proj.weight = model.in_proj.weight.astype(self.mx.float16)
