@@ -250,3 +250,77 @@ class SpatialEmbeddingParityTests(unittest.TestCase):
                     np.testing.assert_allclose(np.array(actual).astype(np.float32), expected,
                                                rtol=1e-4 if dtype == "float32" else 3e-3,
                                                atol=1e-5 if dtype == "float32" else 3e-3)
+
+
+@unittest.skipUnless(importlib.util.find_spec("mlx") and os.environ.get("IDOL_REFERENCE_SOURCE"),
+                     "MLX and pinned reference source are required")
+class RotaryParityTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import mlx.core as mx
+        import numpy as np
+        import torch
+        from idol_mlx.layers import RePo3DRotaryEmbedding, apply_rotary_emb
+
+        sys.path.insert(0, str(Path(os.environ["IDOL_REFERENCE_SOURCE"]).resolve()))
+        from idol.models.layers import RePo3DRotaryEmbedding as TorchRePo, apply_rotary_emb as torch_rotate
+
+        cls.mx, cls.np, cls.torch = mx, np, torch
+        cls.mlx_repo, cls.torch_repo = RePo3DRotaryEmbedding, TorchRePo
+        cls.mlx_rotate, cls.torch_rotate = staticmethod(apply_rotary_emb), staticmethod(torch_rotate)
+        cls.previous_device = mx.default_device()
+        device = os.environ.get("IDOL_TEST_MLX_DEVICE", "cpu")
+        if device not in ("cpu", "gpu"):
+            raise ValueError("IDOL_TEST_MLX_DEVICE must be cpu or gpu")
+        mx.set_default_device(mx.gpu if device == "gpu" else mx.cpu)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.mx.set_default_device(cls.previous_device)
+
+    def test_real_rotary_pairs_with_head_broadcasting_and_input_dtypes(self):
+        mx, np, torch = self.mx, self.np, self.torch
+        values = np.linspace(-2, 2, 96, dtype=np.float32).reshape(2, 3, 2, 8)
+        for heads in (1, 2):
+            angle = np.linspace(-3, 3, 2 * 3 * heads * 4, dtype=np.float32).reshape(2, 3, heads, 4)
+            freqs = np.stack([np.cos(angle), np.sin(angle)], axis=-1)
+            for dtype in ("float32", "float16"):
+                with self.subTest(heads=heads, dtype=dtype):
+                    actual = self.mlx_rotate(mx.array(values).astype(getattr(mx, dtype)), mx.array(freqs))
+                    expected = self.torch_rotate(torch.from_numpy(values).to(getattr(torch, dtype)),
+                                                 torch.from_numpy(freqs)).float().numpy()
+                    mx.eval(actual)
+                    self.assertEqual(tuple(actual.shape), values.shape)
+                    self.assertEqual(actual.dtype, getattr(mx, dtype))
+                    np.testing.assert_allclose(np.array(actual).astype(np.float32), expected, rtol=1e-4, atol=1e-5)
+
+    def test_repo_with_identical_weights_and_frequency_parameters(self):
+        mx, np, torch = self.mx, self.np, self.torch
+        torch.manual_seed(37)
+        for channels, heads, head_dim in ((24, 2, 12), (32, 2, 16)):
+            with self.subTest(channels=channels, head_dim=head_dim):
+                reference = self.torch_repo(channels, heads, head_dim).eval()
+                reference.real_valued = True
+                candidate = self.mlx_repo(channels, heads, head_dim)
+                for name in ("gate_map", "content_map", "final_map"):
+                    source, target = getattr(reference, name), getattr(candidate, name)
+                    self.assertEqual(tuple(target.weight.shape), tuple(source.weight.shape))
+                    target.weight = mx.array(source.weight.detach().numpy())
+                for name in ("weight", "bias"):
+                    source = getattr(reference.norm, name)
+                    self.assertEqual(tuple(getattr(candidate.norm, name).shape), tuple(source.shape))
+                    setattr(candidate.norm, name, mx.array(source.detach().numpy()))
+                for name in ("freqs_0", "freqs_1", "freqs_2"):
+                    source = getattr(reference, name)
+                    self.assertEqual(tuple(getattr(candidate, name).shape), tuple(source.shape))
+                    np.testing.assert_allclose(np.array(getattr(candidate, name)), source.detach().numpy(),
+                                               rtol=1e-6, atol=1e-6)
+                    setattr(candidate, name, mx.array(source.detach().numpy()))
+                values = np.random.default_rng(2026).standard_normal((2, 3, channels)).astype(np.float32)
+                actual = candidate(mx.array(values))
+                expected = reference(torch.from_numpy(values)).detach().numpy()
+                per_token_difference = np.max(np.abs(expected[:, 1:] - expected[:, :-1]), axis=(2, 3, 4))
+                self.assertGreater(float(np.min(per_token_difference)), 1e-3)
+                mx.eval(actual)
+                self.assertEqual(tuple(actual.shape), tuple(expected.shape))
+                np.testing.assert_allclose(np.array(actual), expected, rtol=1e-4, atol=1e-5)
