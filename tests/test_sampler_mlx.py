@@ -15,13 +15,14 @@ class SamplerParityTests(unittest.TestCase):
         import mlx.core as mx
         import numpy as np
         import torch
-        from idol_mlx.sampler import sample_euler, time_grid
+        from idol_mlx.sampler import sample_euler, seeded_noise, time_grid
 
         sys.path.insert(0, str(Path(os.environ["IDOL_REFERENCE_SOURCE"]).resolve()))
         from idol.sampler import sample_flow
 
         cls.mx, cls.np, cls.torch = mx, np, torch
         cls.mlx_sample, cls.time_grid = staticmethod(sample_euler), staticmethod(time_grid)
+        cls.seeded_noise = staticmethod(seeded_noise)
         cls.torch_sample = staticmethod(sample_flow)
         cls.previous_device = mx.default_device()
         device = os.environ.get("IDOL_TEST_MLX_DEVICE", "cpu")
@@ -122,3 +123,47 @@ class SamplerParityTests(unittest.TestCase):
             self.mlx_sample(model, sample, sample, cfg_strength=1.0)
         with self.assertRaisesRegex(ValueError, "batch_cfg"):
             self.mlx_sample(model, sample, sample, batch_cfg=1)
+
+    def test_seeded_noise_and_sampling_are_reproducible(self):
+        mx, np = self.mx, self.np
+        condition = mx.array([[0.2, -0.3], [0.1, 0.4]])
+        noise_a = self.seeded_noise((2, 2), 42)
+        noise_b = self.seeded_noise((2, 2), 42)
+        noise_c = self.seeded_noise((2, 2), 43)
+        model = lambda sample, time, condition: sample * 0.1 + condition
+        output_a = self.mlx_sample(model, noise_a, condition, steps=4)
+        output_b = self.mlx_sample(model, noise_b, condition, steps=4)
+        mx.eval(noise_a, noise_b, noise_c, output_a, output_b)
+        np.testing.assert_array_equal(np.array(noise_a), np.array(noise_b))
+        self.assertFalse(np.array_equal(np.array(noise_a), np.array(noise_c)))
+        np.testing.assert_array_equal(np.array(output_a), np.array(output_b))
+        explicit_a = self.mlx_sample(model, noise_a, condition, steps=4)
+        mx.eval(explicit_a)
+        np.testing.assert_array_equal(np.array(output_a), np.array(explicit_a))
+        for dtype in ("float32", "float16", "bfloat16"):
+            with self.subTest(dtype=dtype):
+                self.assertEqual(self.seeded_noise((2, 2), 0, dtype=dtype).dtype, getattr(mx, dtype))
+
+    def test_seeded_noise_does_not_advance_global_random_stream(self):
+        mx, np = self.mx, self.np
+        try:
+            mx.random.seed(333)
+            expected_first, expected_second = mx.random.normal((4,)), mx.random.normal((4,))
+            mx.eval(expected_first, expected_second)
+            mx.random.seed(333)
+            first = mx.random.normal((4,))
+            local = self.seeded_noise((4,), 17)
+            second = mx.random.normal((4,))
+            mx.eval(first, local, second)
+            np.testing.assert_array_equal(np.array(first), np.array(expected_first))
+            np.testing.assert_array_equal(np.array(second), np.array(expected_second))
+        finally:
+            mx.random.seed(0)
+
+    def test_seeded_noise_rejects_invalid_configuration(self):
+        for shape, seed, dtype in (((0,), 0, "float32"), ((True,), 0, "float32"),
+                                   ([2], 0, "float32"), ((), 0, "float32"),
+                                   ((2,), -1, "float32"), ((2,), 2**64, "float32"),
+                                   ((2,), True, "float32"), ((2,), 0, "float64")):
+            with self.subTest(shape=shape, seed=seed, dtype=dtype), self.assertRaises(ValueError):
+                self.seeded_noise(shape, seed, dtype=dtype)
