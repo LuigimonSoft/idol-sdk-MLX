@@ -203,3 +203,25 @@ class MultiHeadAttention(nn.Module):
         v = v.transpose(0, 2, 1, 3)
         output = mx.fast.scaled_dot_product_attention(q, k, v, scale=q.shape[-1] ** -0.5)
         return self.to_out(output.transpose(0, 2, 1, 3).reshape(batch, length, channels))
+
+
+class RopeMultiHeadAttention(nn.Module):
+    """Denoiser self-attention with real rotary pairs and normalized queries/keys."""
+
+    def __init__(self, channels, num_heads):
+        super().__init__()
+        self.num_heads = num_heads
+        self.head_dim = channels // num_heads
+        self.qkv = nn.Linear(channels, channels * 3)
+        self.q_norm = MultiHeadRMSNorm(self.head_dim, num_heads)
+        self.k_norm = MultiHeadRMSNorm(self.head_dim, num_heads)
+        self.out = nn.Linear(channels, channels)
+
+    def __call__(self, x, rope_emb):
+        batch, length, channels = x.shape
+        qkv = self.qkv(x).reshape(batch, length, 3, self.num_heads, self.head_dim)
+        q = self.q_norm(apply_rotary_emb(qkv[:, :, 0], rope_emb)).transpose(0, 2, 1, 3)
+        k = self.k_norm(apply_rotary_emb(qkv[:, :, 1], rope_emb)).transpose(0, 2, 1, 3)
+        v = qkv[:, :, 2].transpose(0, 2, 1, 3)
+        output = mx.fast.scaled_dot_product_attention(q, k, v, scale=self.head_dim ** -0.5)
+        return self.out(output.transpose(0, 2, 1, 3).reshape(batch, length, channels))
