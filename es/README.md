@@ -24,7 +24,7 @@ indicada a continuación no realiza inferencia.
   con pruebas sintéticas frente a PyTorch.
 - Atención propia y cruzada preliminar del decodificador y atención rotatoria
   del denoiser, con pruebas sintéticas.
-- Un bloque transformer unificado preliminar con pruebas sintéticas FP32.
+- Bloques transformer preliminares unificado y del decodificador con pruebas sintéticas FP32.
 - Una herramienta preliminar de comparación de archivos con tolerancias explícitas.
 - Capturas sintéticas y pruebas de algunos componentes originales, además de
   métricas preliminares de equivalencia numérica.
@@ -90,6 +90,7 @@ imágenes privadas ni pesos al repositorio.
 - [Atención del decodificador](decoder-attention.md)
 - [Atención rotatoria del denoiser](rotary-attention.md)
 - [Bloque transformer unificado](unified-transformer.md)
+- [Bloques transformer del decodificador](decoder-transformers.md)
 - [Capturas sintéticas de referencia](reference-capture.md)
 - [Métricas y tolerancias provisionales](parity-metrics.md)
 - [Comparación de salidas entre backends](parity-harness.md)

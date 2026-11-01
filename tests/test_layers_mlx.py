@@ -536,3 +536,73 @@ class UnifiedTransformerParityTests(unittest.TestCase):
                     mlx_identity = candidate(mx.array(values), mx.array(zero_mod.numpy()), mx.array(rotary))
                     mx.eval(mlx_identity)
                     np.testing.assert_array_equal(np.array(mlx_identity), values)
+
+
+@unittest.skipUnless(importlib.util.find_spec("mlx") and os.environ.get("IDOL_REFERENCE_SOURCE"),
+                     "MLX and pinned reference source are required")
+class DecoderTransformerParityTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import mlx.core as mx
+        import numpy as np
+        import torch
+        from mlx.utils import tree_flatten
+        from idol_mlx.layers import TransformerCrossBlock, ModulatedTransformerCrossOnlyBlock
+
+        sys.path.insert(0, str(Path(os.environ["IDOL_REFERENCE_SOURCE"]).resolve()))
+        from idol.models.layers import TransformerCrossBlock as TorchCross, ModulatedTransformerCrossOnlyBlock as TorchMod
+
+        cls.mx, cls.np, cls.torch = mx, np, torch
+        cls.tree_flatten = staticmethod(tree_flatten)
+        cls.mlx_classes = (TransformerCrossBlock, ModulatedTransformerCrossOnlyBlock)
+        cls.torch_classes = (TorchCross, TorchMod)
+        cls.previous_device = mx.default_device()
+        device = os.environ.get("IDOL_TEST_MLX_DEVICE", "cpu")
+        if device not in ("cpu", "gpu"):
+            raise ValueError("IDOL_TEST_MLX_DEVICE must be cpu or gpu")
+        mx.set_default_device(mx.gpu if device == "gpu" else mx.cpu)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.mx.set_default_device(cls.previous_device)
+
+    def test_decoder_blocks_with_shared_weights_and_different_contexts(self):
+        mx, np, torch = self.mx, self.np, self.torch
+        rng = np.random.default_rng(359)
+        values = rng.normal(size=(2, 3, 8)).astype(np.float32)
+        context = rng.normal(size=(2, 5, 6)).astype(np.float32)
+        mod = rng.normal(scale=0.3, size=(2, 48)).astype(np.float32)
+        for is_modulated in (False, True):
+            with self.subTest(modulated=is_modulated):
+                torch.manual_seed(47)
+                ref = self.torch_classes[is_modulated](8, 6, 2, mlp_ratio=1.5).eval()
+                candidate = self.mlx_classes[is_modulated](8, 6, 2, mlp_ratio=1.5)
+                target = dict(self.tree_flatten(candidate.parameters()))
+                mapped = {}
+                for name, param in ref.named_parameters():
+                    mlx_name = name.replace("mlp.mlp.", "mlp.mlp.layers.")
+                    self.assertIn(mlx_name, target)
+                    self.assertEqual(tuple(target[mlx_name].shape), tuple(param.shape))
+                    mapped[mlx_name] = mx.array(param.detach().numpy())
+                self.assertEqual(set(mapped), set(target))
+                candidate.load_weights(list(mapped.items()), strict=True)
+                input_t, context_t = torch.from_numpy(values), torch.from_numpy(context)
+                input_m, context_m = mx.array(values), mx.array(context)
+                mod_t, mod_m = torch.from_numpy(mod), mx.array(mod)
+                expected = (ref(input_t, mod_t, context_t) if is_modulated else ref(input_t, context_t)).detach().numpy()
+                actual = candidate(input_m, mod_m, context_m) if is_modulated else candidate(input_m, context_m)
+                mx.eval(actual)
+                self.assertEqual(tuple(actual.shape), values.shape)
+                np.testing.assert_allclose(np.array(actual), expected, rtol=1e-4, atol=1e-5)
+                zero_context_t, zero_context_m = torch.zeros_like(context_t), mx.zeros_like(context_m)
+                changed_ref = (ref(input_t, mod_t, zero_context_t) if is_modulated else ref(input_t, zero_context_t))
+                changed_ref = changed_ref.detach().numpy()
+                self.assertGreater(float(np.max(np.abs(expected - changed_ref))), 1e-3)
+                changed = candidate(input_m, mod_m, zero_context_m) if is_modulated else candidate(input_m, zero_context_m)
+                mx.eval(changed)
+                np.testing.assert_allclose(np.array(changed), changed_ref, rtol=1e-4, atol=1e-5)
+                if is_modulated:
+                    identity = candidate(input_m, mx.zeros_like(mod_m), context_m)
+                    mx.eval(identity)
+                    np.testing.assert_array_equal(np.array(identity), values)
+                    np.testing.assert_array_equal(ref(input_t, torch.zeros_like(mod_t), context_t).detach().numpy(), values)

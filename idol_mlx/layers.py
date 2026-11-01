@@ -250,3 +250,39 @@ class UnifiedTransformerBlock(nn.Module):
         x = x + self.attn(h, rotary_emb) * gate_msa[:, None, :]
         h = self.norm2(x) * (1 + scale_mlp[:, None, :]) + shift_mlp[:, None, :]
         return x + self.mlp(h) * gate_mlp[:, None, :]
+
+
+class TransformerCrossBlock(nn.Module):
+    """Gaussian decoder block with self-attention, cross-attention and FFN."""
+
+    def __init__(self, channels, ctx_channels, num_heads, mlp_ratio=4.0):
+        super().__init__()
+        self.norm1 = LayerNorm32(channels, elementwise_affine=False, eps=1e-6)
+        self.norm2 = LayerNorm32(channels, elementwise_affine=True, eps=1e-6)
+        self.norm3 = LayerNorm32(channels, elementwise_affine=False, eps=1e-6)
+        self.self_attn = MultiHeadAttention(channels, num_heads)
+        self.cross_attn = MultiHeadAttention(channels, num_heads, ctx_channels=ctx_channels, cross=True)
+        self.mlp = FeedForwardNet(channels, mlp_ratio)
+
+    def __call__(self, x, context):
+        x = x + self.self_attn(self.norm1(x))
+        x = x + self.cross_attn(self.norm2(x), context)
+        return x + self.mlp(self.norm3(x))
+
+
+class ModulatedTransformerCrossOnlyBlock(nn.Module):
+    """Octree decoder block with modulated cross-attention and FFN."""
+
+    def __init__(self, channels, ctx_channels, num_heads, mlp_ratio=4.0):
+        super().__init__()
+        self.norm1 = LayerNorm32(channels, elementwise_affine=False, eps=1e-6)
+        self.norm2 = LayerNorm32(channels, elementwise_affine=False, eps=1e-6)
+        self.cross_attn = MultiHeadAttention(channels, num_heads, ctx_channels=ctx_channels, cross=True)
+        self.mlp = FeedForwardNet(channels, mlp_ratio)
+
+    def __call__(self, x, mod, context):
+        shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = mx.split(mod, 6, axis=1)
+        h = self.norm1(x) * (1 + scale_msa[:, None, :]) + shift_msa[:, None, :]
+        x = x + self.cross_attn(h, context) * gate_msa[:, None, :]
+        h = self.norm2(x) * (1 + scale_mlp[:, None, :]) + shift_mlp[:, None, :]
+        return x + self.mlp(h) * gate_mlp[:, None, :]
