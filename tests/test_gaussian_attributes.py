@@ -84,6 +84,44 @@ class GaussianAttributeTests(unittest.TestCase):
         self.assertLess(float(np.array(result["opacity"])[0, 0, 0]), 1e-6)
         self.assertGreater(float(np.array(result["opacity"])[0, 1, 0]), 1 - 1e-6)
 
+    def test_synthetic_network_and_conversion_together(self):
+        import tempfile
+        from safetensors.torch import save_file
+        from idol_mlx.gaussian_decoder import GaussianFixedlenDecoder
+        from idol_mlx.gaussian_weights import load_gaussian_checkpoint
+
+        mx, np, torch = self.mx, self.np, self.torch
+        config = self.config(3)
+        args = dict(in_channels=3, model_channels=24, cond_channels=8, num_blocks=2, num_heads=2,
+                    representation_config=config, mlp_ratio=1.5)
+        torch.manual_seed(31)
+        reference = self.reference(**args).eval().float()
+        reference.dtype = torch.float32
+        with torch.no_grad():
+            reference.points_offset_perturbation.copy_(torch.tensor([[0.1, -0.2, 0.3], [0.2, 0.1, -0.1],
+                                                                    [-0.3, 0.2, 0.0]]))
+            reference.base_offset_scale.fill_(-0.2)
+        candidate = GaussianFixedlenDecoder(**args)
+        rng = np.random.default_rng(18)
+        points = rng.random((2, 5, 3), dtype=np.float32)
+        condition = rng.standard_normal((2, 4, 8)).astype(np.float32)
+        with tempfile.TemporaryDirectory() as directory:
+            checkpoint = Path(directory) / "gaussian.safetensors"
+            save_file({key: value.detach().contiguous() for key, value in reference.state_dict().items()},
+                      str(checkpoint))
+            load_gaussian_checkpoint(candidate, checkpoint)
+            with torch.no_grad():
+                features = reference(torch.from_numpy(points), torch.from_numpy(condition))
+                expected = reference.to_representation(torch.from_numpy(points), features)
+            actual_features = candidate(mx.array(points), mx.array(condition))
+            actual = self.decode(mx.array(points), actual_features, representation_config=config,
+                                 points_offset_perturbation=candidate.points_offset_perturbation,
+                                 base_offset_scale=candidate.base_offset_scale)
+            mx.eval(actual)
+            for name, value in actual.items():
+                expected_value = np.stack([getattr(item, name).detach().numpy() for item in expected])
+                np.testing.assert_allclose(np.array(value), expected_value, atol=2e-5, rtol=2e-4, err_msg=name)
+
     def test_trained_checkpoint_diagnostic_with_synthetic_weights(self):
         import json
         import tempfile

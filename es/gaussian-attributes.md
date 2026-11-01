@@ -39,7 +39,8 @@ y formas de buffers. Esta función no exporta PLY ni rota coordenadas a eje y.
 
 Las pruebas sintéticas comparan los cinco atributos con PyTorch en CPU y Metal,
 incluidos varios lotes y cantidades por ancla, cuaterniones degenerados, color
-SH y saturación. Con `decoder_gs.safetensors` de
+SH y saturación. Una prueba de integración sintética también compara atributos
+generados a partir de las características de la red gaussiana de cada entorno. Con `decoder_gs.safetensors` de
 [`speridlabs/idol` revisión `2731c2291fc65a797c5cb627a5e5526fc1490902`](https://huggingface.co/speridlabs/idol/tree/2731c2291fc65a797c5cb627a5e5526fc1490902),
 32 anclas sintéticas, 8 tokens de condición y semilla 42, todos los atributos
 pasaron `atol=2e-5`, `rtol=2e-4` en CPU y Metal. En Metal el error absoluto

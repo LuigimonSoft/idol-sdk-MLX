@@ -39,7 +39,8 @@ validated. This function does not export PLY or rotate coordinates to y-up.
 
 Synthetic tests compare all five attributes against PyTorch on CPU and Metal,
 including multiple batches, per-anchor counts, degenerate quaternions, SH color
-and saturation. With `decoder_gs.safetensors` from
+and saturation. A synthetic integration test also compares attributes produced
+from each framework’s own Gaussian network features. With `decoder_gs.safetensors` from
 [`speridlabs/idol` revision `2731c2291fc65a797c5cb627a5e5526fc1490902`](https://huggingface.co/speridlabs/idol/tree/2731c2291fc65a797c5cb627a5e5526fc1490902),
 32 synthetic anchors, 8 context tokens and seed 42, all attributes passed
 `atol=2e-5`, `rtol=2e-4` on CPU and Metal. On Metal the maximum absolute error
