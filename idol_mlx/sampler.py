@@ -18,9 +18,8 @@ def time_grid(steps, rescale_t=3.0):
     result = []
     for i in range(steps + 1):
         t = 1.0 - i / steps
-        denominator = 1.0 + (rescale_t - 1.0) * t
-        if denominator <= 0:
-            raise ValueError("rescale_t is too small for stable time-grid calculation.")
+        # Equivalent to 1 + (rescale_t - 1) * t without cancellation near t=1.
+        denominator = (1.0 - t) + rescale_t * t
         result.append(rescale_t * t / denominator)
     return tuple(result)
 
