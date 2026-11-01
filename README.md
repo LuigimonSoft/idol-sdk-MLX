@@ -25,7 +25,7 @@ below to perform inference.
 - Preliminary decoder self/cross-attention and denoiser rotary attention with
   synthetic parity checks.
 - Preliminary unified and decoder transformer blocks with synthetic FP32 parity checks.
-- A preliminary unguided Euler sampler with synthetic parity checks.
+- A preliminary Euler sampler with optional classifier-free guidance and synthetic parity checks.
 - A preliminary file-based parity comparison tool with explicit tolerances.
 - Synthetic reference captures and tests for selected upstream components,
   plus preliminary numerical parity metrics.
