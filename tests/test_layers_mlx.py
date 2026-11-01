@@ -236,7 +236,7 @@ class SpatialEmbeddingParityTests(unittest.TestCase):
     def test_decoder_positions_across_padding_and_input_dtypes(self):
         mx, np, torch = self.mx, self.np, self.torch
         values = np.array([[0., 0.25, 1.], [0.125, 0.5, 0.75]], dtype=np.float32)
-        for channels in (12, 13):
+        for channels in (12, 13, 30, 31):
             for dtype in ("float32", "float16"):
                 with self.subTest(channels=channels, dtype=dtype):
                     reference = self.torch_v2(channels, max_res=3)
