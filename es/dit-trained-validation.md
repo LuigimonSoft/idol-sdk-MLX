@@ -27,9 +27,21 @@ inspección separada encontró una diferencia absoluta máxima de frecuencias de
 Al proporcionar directamente a MLX las frecuencias calculadas por PyTorch, el
 error máximo posicional bajó de 0.0312334 a 1.78814e-7 para esta entrada. Esto
 aísla el cálculo de frecuencias como causa principal de esta diferencia
-posicional; no demuestra que se resuelvan todas las diferencias de salida del
-denoiser. Desactivar `MLX_ENABLE_TF32` no cambió los errores de salida en
-este caso. Queda pendiente investigar y corregir las diferencias; no se han
+posicional. Una segunda ejecución MLX sustituye ese mismo embedding de
+posición derivado de la referencia, sin cambiar el código de producción. Para
+la misma entrada reducida y tolerancias, los resultados fueron:
+
+| Dispositivo MLX | Error máximo posición | Error máximo latente | Error máximo cámara | Resultado con frecuencias compartidas |
+| --- | ---: | ---: | ---: | --- |
+| CPU | 1.19209e-7 | 7.33137e-6 | 1.49012e-5 | Pasa |
+| GPU Metal | 1.78814e-7 | 5.12600e-6 | 1.10269e-5 | Pasa |
+
+Estas mediciones adicionales usaron Python 3.12 en un entorno temporal de
+diagnóstico (el paquete admite Python 3.13), con las mismas versiones de MLX
+y PyTorch. Muestran el efecto para esta entrada FP32 reducida; no establecen
+paridad general ni proporcionan una solución de producción sin PyTorch. La ruta
+normal de MLX sigue fallando. Desactivar `MLX_ENABLE_TF32` no cambió los errores
+de salida originales de GPU en este caso. Queda pendiente investigar y corregir las diferencias; no se han
 ampliado las tolerancias para hacer pasar la prueba.
 
 ## Reproducir
@@ -45,7 +57,7 @@ PYTHONPATH=../idol-sdk-reference .venv-reference/bin/python -m scripts.validate_
 
 Usa `--device cpu` para MLX CPU y `--tokens` o `--context-tokens` para elegir
 longitudes reducidas. La salida JSON contiene solo métricas agregadas; el código
-0 indica que las cuatro comparaciones pasan y el 1 que alguna falla. La herramienta
+0 indica que las seis comparaciones pasan y el 1 que alguna falla. La herramienta
 carga el modelo y checkpoint completos, por lo que necesita memoria suficiente.
 No escribe pesos ni entradas. La prueba automatizada usa un checkpoint sintético
 pequeño en CI; no requiere pesos entrenados. No valida memoria a tamaño completo,

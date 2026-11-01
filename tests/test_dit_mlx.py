@@ -153,9 +153,12 @@ class DenoiserParityTests(unittest.TestCase):
             self.save_file({name: value.detach().contiguous() for name, value in reference.state_dict().items()},
                            str(checkpoint_path))
             report = compare_checkpoint(config_path, checkpoint_path, tokens=3, context_tokens=2)
-            self.assertEqual(set(report["comparisons"]), {"position", "position_shared_frequencies", "latent", "camera"})
+            self.assertEqual(set(report["comparisons"]), {"position", "position_shared_frequencies", "latent", "camera",
+                                                          "latent_shared_frequencies", "camera_shared_frequencies"})
             self.assertTrue(all(value["passed"] for value in report["comparisons"].values()), report)
             self.assertEqual(report["comparisons"]["latent"]["count"], 12)
+            self.assertEqual(report["comparisons"]["latent_shared_frequencies"]["count"], 12)
+            self.assertEqual(report["comparisons"]["camera_shared_frequencies"]["count"], 5)
             observed = {"torch": [], "mlx": []}
             torch_forward = TorchPositionEmbedder.forward
             mlx_call = PcdAbsolutePositionEmbedder.__call__
@@ -179,5 +182,20 @@ class DenoiserParityTests(unittest.TestCase):
                 self.assertTrue(observed[backend])
                 for actual_positions in observed[backend]:
                     self.np.testing.assert_array_equal(actual_positions, positions[:, :2, :])
+            # A deliberate reference frequency change must affect both the
+            # positional comparison and the baseline denoiser output.
+            torch_init = TorchPositionEmbedder.__init__
+
+            def changed_frequencies(module, *args, **kwargs):
+                torch_init(module, *args, **kwargs)
+                module.freqs *= 1.1
+
+            with patch.object(TorchPositionEmbedder, "__init__", changed_frequencies):
+                changed = compare_checkpoint(config_path, checkpoint_path, tokens=3, context_tokens=2)
+            self.assertFalse(changed["comparisons"]["position"]["passed"])
+            self.assertTrue(changed["comparisons"]["position_shared_frequencies"]["passed"])
+            self.assertFalse(changed["comparisons"]["latent"]["passed"])
+            self.assertTrue(changed["comparisons"]["latent_shared_frequencies"]["passed"])
+            self.assertTrue(changed["comparisons"]["camera_shared_frequencies"]["passed"])
             with self.assertRaises(ValueError):
                 compare_checkpoint(config_path, checkpoint_path, tokens=4)

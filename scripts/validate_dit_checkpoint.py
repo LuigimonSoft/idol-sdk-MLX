@@ -73,6 +73,12 @@ def compare_checkpoint(config_path, checkpoint_path, *, tokens=8, context_tokens
     actual = candidate({"latent": mx.array(latent), "camera": mx.array(camera)}, mx.array(time),
                        {"feature1": mx.array(feature1), "feature2": mx.array(feature2)})
     mx.eval(actual_position, shared_position, actual)
+    # Reuse the same embedding only for this diagnostic forward pass.
+    # This is not a production frequency-generation strategy.
+    candidate.pos_embedder = lambda _positions: shared_position
+    shared_actual = candidate({"latent": mx.array(latent), "camera": mx.array(camera)}, mx.array(time),
+                              {"feature1": mx.array(feature1), "feature2": mx.array(feature2)})
+    mx.eval(shared_actual)
     comparisons = {
         "position": asdict(compare(expected_position, np.array(actual_position), atol=atol, rtol=rtol)),
         "position_shared_frequencies": asdict(compare(expected_position, np.array(shared_position),
@@ -81,6 +87,8 @@ def compare_checkpoint(config_path, checkpoint_path, *, tokens=8, context_tokens
     for name in ("latent", "camera"):
         comparisons[name] = asdict(compare(expected[name].detach().numpy(), np.array(actual[name]),
                                            atol=atol, rtol=rtol))
+        comparisons[f"{name}_shared_frequencies"] = asdict(
+            compare(expected[name].detach().numpy(), np.array(shared_actual[name]), atol=atol, rtol=rtol))
     return {"tokens": tokens, "context_tokens": context_tokens, "dtype": "float32",
             "mlx_device": str(mx.default_device()), "atol": atol, "rtol": rtol,
             "comparisons": comparisons}

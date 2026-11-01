@@ -71,7 +71,9 @@ IDOL_REFERENCE_SOURCE=../idol-sdk-reference .venv-reference/bin/python -m unitte
 
 If `IDOL_REFERENCE_SOURCE` is not set, reference-dependent tests are skipped;
 a skipped run is not full validation. The current tests do not prove full-model
-inference or PyTorch/MLX parity.
+inference or PyTorch/MLX parity. A [reduced trained-checkpoint diagnostic](docs/dit-trained-validation.md)
+compares denoiser outputs with both native and reference-derived position
+frequencies; the native path does not yet meet the provisional tolerances.
 
 Future full inference requires approved access to DINOv3 and FLUX.2 dev and
 compliance with their separate licenses. See

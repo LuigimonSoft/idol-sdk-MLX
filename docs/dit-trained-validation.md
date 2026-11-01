@@ -27,8 +27,21 @@ PyTorch CPU and MLX Metal, with differences in 56 of 170 frequency values.
 Supplying the PyTorch-computed frequencies directly to MLX reduced maximum
 position error from 0.0312334 to 1.78814e-7 for this input. This isolates
 frequency calculation as the dominant cause of this positional discrepancy;
-it does not prove that all denoiser output differences are resolved. Disabling `MLX_ENABLE_TF32` did not change the observed GPU output errors
-in this case. Investigating and correcting numerical differences remains work;
+the positional discrepancy. A second MLX forward pass now substitutes that
+same reference-derived position embedding, without changing production code.
+For the same reduced input and tolerances, its trained-checkpoint output was:
+
+| MLX device | Position max absolute error | Latent max absolute error | Camera max absolute error | Shared-frequency result |
+| --- | ---: | ---: | ---: | --- |
+| CPU | 1.19209e-7 | 7.33137e-6 | 1.49012e-5 | Pass |
+| Metal GPU | 1.78814e-7 | 5.12600e-6 | 1.10269e-5 | Pass |
+
+These additional measurements used Python 3.12 in a temporary diagnostic
+environment (the package supports Python 3.13), with the same MLX and PyTorch
+versions. They show the effect for this one reduced FP32 input; they do not
+establish general parity or provide a PyTorch-free production solution. The
+normal MLX path still fails. Disabling `MLX_ENABLE_TF32` did not change the
+original GPU output errors in this case. Investigating and correcting numerical differences remains work;
 tolerances have not been increased to make the result pass.
 
 ## Reproduce
@@ -44,7 +57,7 @@ PYTHONPATH=../idol-sdk-reference .venv-reference/bin/python -m scripts.validate_
 
 Use `--device cpu` for MLX CPU, and `--tokens` or `--context-tokens` to select
 reduced lengths. The JSON output contains only aggregate comparison metrics;
-exit 0 means all four comparisons pass, exit 1 means at least one comparison
+exit 0 means all six comparisons pass, exit 1 means at least one comparison
 fails. The tool loads the full model/checkpoint, so it needs sufficient memory.
 It does not write weights or inputs. The automated test uses a tiny synthetic
 checkpoint and runs in CI; trained weights are never needed in CI. This tool
