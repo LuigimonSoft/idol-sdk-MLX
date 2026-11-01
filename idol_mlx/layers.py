@@ -118,7 +118,12 @@ class PcdAbsolutePositionEmbedderv2(nn.Module):
     def __call__(self, x):
         logs = mx.linspace(0.0, float(self.max_res), self.freq_dim, dtype=mx.float32)
         frequencies = mx.power(2.0, logs).astype(x.dtype)
-        angles = mx.expand_dims(x, -1) * frequencies * math.pi
+        product = mx.expand_dims(x, -1) * frequencies
+        # PyTorch applies the scalar in FP32 before rounding a reduced-precision result.
+        if x.dtype in (mx.float16, mx.bfloat16):
+            angles = (product.astype(mx.float32) * math.pi).astype(x.dtype)
+        else:
+            angles = product * math.pi
         embedding = mx.concatenate([mx.sin(angles), mx.cos(angles)], axis=-1).reshape(x.shape[0], -1)
         if embedding.shape[1] < self.channels:
             padding = mx.zeros((x.shape[0], self.channels - embedding.shape[1]), dtype=embedding.dtype)
