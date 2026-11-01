@@ -3,6 +3,7 @@
 import argparse
 from dataclasses import asdict
 import json
+import math
 from pathlib import Path
 import sys
 
@@ -62,10 +63,21 @@ def compare_checkpoint(config_path, checkpoint_path, *, tokens=8, context_tokens
         expected_position = reference.pos_embedder(reference.pos_pe).numpy()
         expected = reference(x_t, torch.from_numpy(time), cond_t)
     actual_position = candidate.pos_embedder(candidate.pos_pe)
+    # Isolate frequency generation by using the reference frequencies in MLX.
+    reference_frequencies = mx.array(reference.pos_embedder.freqs.numpy())
+    angles = mx.outer(candidate.pos_pe.reshape(-1), reference_frequencies) * 2 * math.pi
+    shared_position = mx.concatenate([mx.sin(angles), mx.cos(angles)], axis=-1).reshape(1, tokens, -1)
+    padding = config["model_channels"] - shared_position.shape[-1]
+    if padding > 0:
+        shared_position = mx.concatenate([shared_position, mx.zeros((1, tokens, padding))], axis=-1)
     actual = candidate({"latent": mx.array(latent), "camera": mx.array(camera)}, mx.array(time),
                        {"feature1": mx.array(feature1), "feature2": mx.array(feature2)})
-    mx.eval(actual_position, actual)
-    comparisons = {"position": asdict(compare(expected_position, np.array(actual_position), atol=atol, rtol=rtol))}
+    mx.eval(actual_position, shared_position, actual)
+    comparisons = {
+        "position": asdict(compare(expected_position, np.array(actual_position), atol=atol, rtol=rtol)),
+        "position_shared_frequencies": asdict(compare(expected_position, np.array(shared_position),
+                                                       atol=atol, rtol=rtol)),
+    }
     for name in ("latent", "camera"):
         comparisons[name] = asdict(compare(expected[name].detach().numpy(), np.array(actual[name]),
                                            atol=atol, rtol=rtol))
