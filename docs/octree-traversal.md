@@ -27,8 +27,9 @@ may produce `1.0` at deep levels.
 Nonempty children are packed per batch using stable sorting. The largest active
 cell count is read back to the host each level; outputs use padded batches and
 the leaf expansion loops over batches. This is an eager, preliminary path, not
-a fully GPU-resident or benchmarked implementation. Level and point limits do
-not guarantee sufficient memory; full-scale memory and runtime remain untested.
+a fully GPU-resident implementation. Level and point limits do not guarantee
+sufficient memory; see [measured octree scenarios](octree-profiling.md) for
+observations and limitations on one machine.
 
 Controlled tests compare the pinned PyTorch sampler with identical offsets and
 jitter for multiple batches and levels 0–3. They also check counts, uniform

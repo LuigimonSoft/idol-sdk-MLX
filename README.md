@@ -87,6 +87,8 @@ private images or model weights.
 
 ## Documentation
 
+- [Octree limits and memory observations](docs/octree-profiling.md)
+
 - [Octree anchor sampling](docs/octree-traversal.md)
 
 - [Octree systematic resampling](docs/octree-resampling.md)

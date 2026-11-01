@@ -89,6 +89,8 @@ imágenes privadas ni pesos al repositorio.
 
 ## Documentación
 
+- [Observaciones de límites y memoria del octree](octree-profiling.md)
+
 - [Muestreo de anclas octree](octree-traversal.md)
 
 - [Muestreo sistemático octree](octree-resampling.md)

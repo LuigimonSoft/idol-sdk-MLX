@@ -27,9 +27,9 @@ en niveles profundos.
 Los hijos no vacíos se compactan por lote mediante ordenamiento estable. En cada
 nivel se lee al host el mayor número de celdas activas; se usan lotes rellenados
 y la expansión de hojas recorre los elementos del lote. Es una implementación
-preliminar y eager, no una operación completamente residente en GPU ni medida a
-escala. Los límites de nivel y puntos no garantizan memoria suficiente; falta
-medir memoria y tiempo para tamaños completos.
+preliminar y eager, no una operación completamente residente en GPU. Los límites
+de nivel y puntos no garantizan memoria suficiente; consulta los [escenarios
+medidos](octree-profiling.md) y sus límites en un equipo.
 
 Las pruebas controladas comparan el muestreador PyTorch fijado con los mismos
 desplazamientos para varios lotes y niveles 0–3. También comprueban conteos,
