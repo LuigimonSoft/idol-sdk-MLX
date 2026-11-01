@@ -28,6 +28,8 @@ below to perform inference.
 - A preliminary Euler sampler with optional classifier-free guidance and synthetic parity checks.
 - Explicit seeded MLX noise generation and per-step synthetic trajectory checks.
 - MLX camera-latent decoding to the upstream JSON-compatible fields.
+- A preliminary FP32 Gaussian feature decoder with strict checkpoint mapping;
+  one reduced trained-weight Metal case still fails provisional tolerances.
 - Preliminary octree traversal and anchor sampling with controlled MLX randomness.
 - A systematic octree resampling primitive with explicit random offsets.
 - A preliminary FP32 octree probability network and strict checkpoint mapping,
@@ -38,9 +40,9 @@ below to perform inference.
 - Synthetic reference captures and tests for selected upstream components,
   plus preliminary numerical parity metrics.
 
-A preliminary FP32 DiT forward path is available for synthetic configurations.
-Model-specific checkpoint schemas, trained weight conversion, encoders, full-size
-decoders and end-to-end inference remain to be implemented and validated.
+Preliminary FP32 denoiser and decoder paths have limited synthetic and
+trained-checkpoint validation. Additional checkpoint schemas and conversion,
+encoders, complete decoders and end-to-end inference remain work in progress.
 
 ## Installation
 
@@ -86,6 +88,8 @@ compliance with their separate licenses. See
 private images or model weights.
 
 ## Documentation
+
+- [Gaussian feature decoder](docs/gaussian-decoder.md)
 
 - [Octree limits and memory observations](docs/octree-profiling.md)
 
