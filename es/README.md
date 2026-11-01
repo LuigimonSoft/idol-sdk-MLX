@@ -20,6 +20,7 @@ indicada a continuación no realiza inferencia.
 - Mapeo explícito de nombres en memoria y conversión de disposición para Conv2d
   estándar sin grupos, con validación estricta del esquema de salida.
 - Una política preliminar opcional de precisión y límites de evaluación explícitos.
+- Algunas capas de normalización MLX con pruebas sintéticas frente a PyTorch.
 - Una herramienta preliminar de comparación de archivos con tolerancias explícitas.
 - Capturas sintéticas y pruebas de algunos componentes originales, además de
   métricas preliminares de equivalencia numérica.
@@ -77,6 +78,7 @@ imágenes privadas ni pesos al repositorio.
 - [Validación de configuración y checkpoints](config-and-weights.md)
 - [Mapeo preliminar de pesos](weight-mapping.md)
 - [Política de precisión y evaluación diferida](precision-evaluation.md)
+- [Capas de normalización MLX](normalization-layers.md)
 - [Capturas sintéticas de referencia](reference-capture.md)
 - [Métricas y tolerancias provisionales](parity-metrics.md)
 - [Comparación de salidas entre backends](parity-harness.md)
