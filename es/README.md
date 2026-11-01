@@ -27,12 +27,14 @@ indicada a continuación no realiza inferencia.
 - Bloques transformer preliminares unificado y del decodificador con pruebas sintéticas FP32.
 - Un sampler Euler preliminar con guía classifier-free opcional y pruebas sintéticas.
 - Ruido MLX con semilla y comparaciones sintéticas de trayectoria por paso.
+- Una pasada preliminar del denoiser FP32 validada en un modelo sintético pequeño.
 - Una herramienta preliminar de comparación de archivos con tolerancias explícitas.
 - Capturas sintéticas y pruebas de algunos componentes originales, además de
   métricas preliminares de equivalencia numérica.
 
-Faltan los esquemas de checkpoints de cada modelo, la conversión de pesos, los
-encoders, el DiT, los decodificadores y la inferencia completa.
+Existe una pasada DiT FP32 preliminar para configuraciones sintéticas. Faltan los
+esquemas de checkpoints, la conversión de pesos entrenados, los encoders, los
+decodificadores completos y la inferencia integral.
 
 ## Instalación
 
@@ -96,6 +98,7 @@ imágenes privadas ni pesos al repositorio.
 - [Sampler Euler](euler-sampler.md)
 - [Ruido con semilla y reproducibilidad](reproducibility.md)
 - [Trayectorias sintéticas del sampler](sampler-trajectories.md)
+- [Denoiser FP32 preliminar](dit-fp32.md)
 - [Capturas sintéticas de referencia](reference-capture.md)
 - [Métricas y tolerancias provisionales](parity-metrics.md)
 - [Comparación de salidas entre backends](parity-harness.md)

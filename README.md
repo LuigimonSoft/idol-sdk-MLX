@@ -27,11 +27,13 @@ below to perform inference.
 - Preliminary unified and decoder transformer blocks with synthetic FP32 parity checks.
 - A preliminary Euler sampler with optional classifier-free guidance and synthetic parity checks.
 - Explicit seeded MLX noise generation and per-step synthetic trajectory checks.
+- A preliminary FP32 denoiser forward path validated on a tiny synthetic model.
 - A preliminary file-based parity comparison tool with explicit tolerances.
 - Synthetic reference captures and tests for selected upstream components,
   plus preliminary numerical parity metrics.
 
-Model-specific checkpoint schemas, weight conversion, encoders, the DiT,
+A preliminary FP32 DiT forward path is available for synthetic configurations.
+Model-specific checkpoint schemas, trained weight conversion, encoders, full-size
 decoders and end-to-end inference remain to be implemented and validated.
 
 ## Installation
@@ -94,6 +96,7 @@ private images or model weights.
 - [Euler flow sampler](docs/euler-sampler.md)
 - [Seeded noise and reproducibility](docs/reproducibility.md)
 - [Synthetic sampler trajectories](docs/sampler-trajectories.md)
+- [Preliminary FP32 denoiser](docs/dit-fp32.md)
 - [Synthetic reference captures](docs/reference-capture.md)
 - [Parity metrics and provisional tolerances](docs/parity-metrics.md)
 - [Comparing backend outputs](docs/parity-harness.md)
