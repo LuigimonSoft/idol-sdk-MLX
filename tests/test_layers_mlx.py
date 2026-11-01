@@ -395,3 +395,75 @@ class DecoderAttentionParityTests(unittest.TestCase):
                         np.testing.assert_allclose(np.array(actual_altered).astype(np.float32), altered,
                                                    rtol=1e-4 if dtype == "float32" else 3e-3,
                                                    atol=1e-5 if dtype == "float32" else 3e-3)
+
+
+@unittest.skipUnless(importlib.util.find_spec("mlx") and os.environ.get("IDOL_REFERENCE_SOURCE"),
+                     "MLX and pinned reference source are required")
+class RotaryAttentionParityTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        import mlx.core as mx
+        import numpy as np
+        import torch
+        from idol_mlx.layers import RopeMultiHeadAttention
+
+        sys.path.insert(0, str(Path(os.environ["IDOL_REFERENCE_SOURCE"]).resolve()))
+        from idol.models.layers import RopeMultiHeadAttention as TorchRotaryAttention
+
+        cls.mx, cls.np, cls.torch = mx, np, torch
+        cls.mlx_attention, cls.torch_attention = RopeMultiHeadAttention, TorchRotaryAttention
+        cls.previous_device = mx.default_device()
+        device = os.environ.get("IDOL_TEST_MLX_DEVICE", "cpu")
+        if device not in ("cpu", "gpu"):
+            raise ValueError("IDOL_TEST_MLX_DEVICE must be cpu or gpu")
+        mx.set_default_device(mx.gpu if device == "gpu" else mx.cpu)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.mx.set_default_device(cls.previous_device)
+
+    def test_rotary_self_attention_with_shared_parameters_and_nontrivial_angles(self):
+        mx, np, torch = self.mx, self.np, self.torch
+        rng = np.random.default_rng(709)
+        values = rng.normal(size=(2, 4, 12)).astype(np.float32)
+        for heads in (1, 2):
+            head_dim = 12 // heads
+            angles = rng.uniform(-2, 2, size=(2, 4, heads, head_dim // 2)).astype(np.float32)
+            rotary = np.stack([np.cos(angles), np.sin(angles)], axis=-1)
+            identity = np.zeros_like(rotary)
+            identity[..., 0] = 1
+            for dtype in ("float32", "float16"):
+                with self.subTest(heads=heads, dtype=dtype):
+                    torch.manual_seed(91)
+                    ref = self.torch_attention(12, heads).eval().to(getattr(torch, dtype))
+                    model = self.mlx_attention(12, heads)
+                    with torch.no_grad():
+                        ref.q_norm.gamma.copy_(torch.linspace(0.5, 1.2, 12).reshape(heads, head_dim))
+                        ref.k_norm.gamma.copy_(torch.linspace(1.3, 0.7, 12).reshape(heads, head_dim))
+                    for name in ("qkv", "out"):
+                        source, target = getattr(ref, name), getattr(model, name)
+                        for param in ("weight", "bias"):
+                            value = getattr(source, param)
+                            self.assertEqual(tuple(getattr(target, param).shape), tuple(value.shape))
+                            setattr(target, param, mx.array(value.detach().float().numpy()).astype(getattr(mx, dtype)))
+                    for name in ("q_norm", "k_norm"):
+                        source, target = getattr(ref, name), getattr(model, name)
+                        self.assertEqual(tuple(target.gamma.shape), tuple(source.gamma.shape))
+                        target.gamma = mx.array(source.gamma.detach().float().numpy()).astype(getattr(mx, dtype))
+                    input_t = torch.from_numpy(values).to(getattr(torch, dtype))
+                    input_m = mx.array(values).astype(getattr(mx, dtype))
+                    actual = model(input_m, mx.array(rotary))
+                    expected = ref(input_t, torch.from_numpy(rotary)).detach().float().numpy()
+                    mx.eval(actual)
+                    self.assertEqual(tuple(actual.shape), (2, 4, 12))
+                    self.assertEqual(actual.dtype, getattr(mx, dtype))
+                    np.testing.assert_allclose(np.array(actual).astype(np.float32), expected,
+                                               rtol=1e-4 if dtype == "float32" else 3e-3,
+                                               atol=1e-5 if dtype == "float32" else 3e-3)
+                    ref_identity = ref(input_t, torch.from_numpy(identity)).detach().float().numpy()
+                    self.assertGreater(float(np.max(np.abs(expected - ref_identity))), 1e-3)
+                    actual_identity = model(input_m, mx.array(identity))
+                    mx.eval(actual_identity)
+                    np.testing.assert_allclose(np.array(actual_identity).astype(np.float32), ref_identity,
+                                               rtol=1e-4 if dtype == "float32" else 3e-3,
+                                               atol=1e-5 if dtype == "float32" else 3e-3)
