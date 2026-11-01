@@ -4,6 +4,7 @@ import importlib.util
 import os
 from pathlib import Path
 import sys
+import tempfile
 import unittest
 
 
@@ -18,6 +19,9 @@ class DenoiserParityTests(unittest.TestCase):
         from mlx.utils import tree_flatten
         from tensordict import TensorDict
         from idol_mlx.dit import LatentSeqMMFlowModel
+        from idol_mlx.dit_weights import load_dit_checkpoint
+        from idol_mlx.weights import CheckpointError
+        from safetensors.torch import save_file
 
         sys.path.insert(0, str(Path(os.environ["IDOL_REFERENCE_SOURCE"]).resolve()))
         from idol.models.dit import LatentSeqMMFlowModel as TorchDenoiser
@@ -25,6 +29,8 @@ class DenoiserParityTests(unittest.TestCase):
         cls.mx, cls.np, cls.torch = mx, np, torch
         cls.tree_flatten, cls.tensor_dict = staticmethod(tree_flatten), TensorDict
         cls.mlx_model, cls.torch_model = LatentSeqMMFlowModel, TorchDenoiser
+        cls.load_checkpoint, cls.save_file = staticmethod(load_dit_checkpoint), staticmethod(save_file)
+        cls.checkpoint_error = CheckpointError
         cls.previous_device = mx.default_device()
         device = os.environ.get("IDOL_TEST_MLX_DEVICE", "cpu")
         if device not in ("cpu", "gpu"):
@@ -49,18 +55,10 @@ class DenoiserParityTests(unittest.TestCase):
         with torch.no_grad():
             ref.pos_pe.copy_(torch.tensor([[[0.1, 0.3, 0.5], [0.7, 0.2, 0.4], [0.9, 0.6, 0.8]]]))
         model = self.mlx_model(**config)
-        target = dict(self.tree_flatten(model.parameters()))
-        mapped = {}
-        for name, tensor in ref.state_dict().items():
-            mlx_name = (name.replace("adaLN_modulation.1.", "adaLN_modulation.layers.1.")
-                        .replace("t_embedder.mlp.", "t_embedder.mlp.layers.")
-                        .replace("cam_refiner.mlp.", "cam_refiner.mlp.layers.")
-                        .replace(".mlp.mlp.", ".mlp.mlp.layers."))
-            self.assertIn(mlx_name, target)
-            self.assertEqual(tuple(target[mlx_name].shape), tuple(tensor.shape))
-            mapped[mlx_name] = mx.array(tensor.detach().numpy())
-        self.assertEqual(set(mapped), set(target))
-        model.load_weights(list(mapped.items()), strict=True)
+        with tempfile.TemporaryDirectory() as directory:
+            path = str(Path(directory) / "synthetic.safetensors")
+            self.save_file({name: value.detach().contiguous() for name, value in ref.state_dict().items()}, path)
+            self.load_checkpoint(model, path)
         rng = np.random.default_rng(113)
         for batch, cond_len in ((1, 2), (2, 4)):
             with self.subTest(batch=batch, cond_len=cond_len):
@@ -91,3 +89,40 @@ class DenoiserParityTests(unittest.TestCase):
                                      "feature2": mx.zeros_like(mx.array(feature2))})
                 mx.eval(zero_actual)
                 np.testing.assert_allclose(np.array(zero_actual["latent"]), zero_expected, rtol=2e-4, atol=2e-5)
+
+    def test_invalid_checkpoints_are_rejected_before_model_update(self):
+        mx, np, torch = self.mx, self.np, self.torch
+        config = dict(q_token_length=3, in_channels=4, cam_channels=5, model_channels=24,
+                      cond_channels=6, cond2_channels=7, num_blocks=1, num_refiner_blocks=2,
+                      num_heads=2, num_head_channels=12, mlp_ratio=1.5)
+        ref = self.torch_model(**config).eval().float()
+        source = {name: value.detach().clone().contiguous() for name, value in ref.state_dict().items()}
+        for problem in ("missing", "unexpected", "shape", "dtype"):
+            with self.subTest(problem=problem), tempfile.TemporaryDirectory() as directory:
+                tensors = dict(source)
+                if problem == "missing":
+                    del tensors["pos_pe"]
+                elif problem == "unexpected":
+                    tensors["unexpected"] = torch.ones(1)
+                elif problem == "shape":
+                    tensors["pos_pe"] = torch.zeros((1, 2, 3))
+                else:
+                    tensors["pos_pe"] = tensors["pos_pe"].half()
+                path = str(Path(directory) / "invalid.safetensors")
+                self.save_file(tensors, path)
+                model = self.mlx_model(**config)
+                before = {key: np.array(value) for key, value in self.tree_flatten(model.parameters())}
+                with self.assertRaises(self.checkpoint_error):
+                    self.load_checkpoint(model, path)
+                after = dict(self.tree_flatten(model.parameters()))
+                self.assertEqual(set(before), set(after))
+                for key in before:
+                    np.testing.assert_array_equal(np.array(after[key]), before[key])
+
+    def test_non_fp32_target_rejected(self):
+        model = self.mlx_model(q_token_length=3, in_channels=4, cam_channels=5, model_channels=24,
+                               cond_channels=6, cond2_channels=7, num_blocks=1, num_refiner_blocks=2,
+                               num_heads=2, num_head_channels=12, mlp_ratio=1.5)
+        model.input_layer.weight = model.input_layer.weight.astype(self.mx.float16)
+        with self.assertRaisesRegex(ValueError, "target model tensors must be float32"):
+            self.load_checkpoint(model, "unused.safetensors")

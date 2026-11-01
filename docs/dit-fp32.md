@@ -19,9 +19,9 @@ the upstream default precision path. `model_channels` must equal
 A tiny synthetic model test maps all 123 PyTorch parameters and buffers by name,
 checks every shape and loads them strictly into MLX. It compares latent and
 camera outputs for two batch/condition lengths on CPU or Metal using tolerance
-`atol=2e-5, rtol=2e-4`. This mapping exists only in test code; automatic
-checkpoint conversion, model-specific schemas, trained weights, full-size
-memory requirements and end-to-end inference remain unvalidated. Do not commit
+`atol=2e-5, rtol=2e-4`. The preliminary [checkpoint loader](dit-checkpoints.md) provides this mapping
+and strict validation for FP32 safetensors. Trained weights, upstream mixed
+precision, full-size memory requirements and end-to-end inference remain unvalidated. Do not commit
 model weights, private inputs or credentials.
 
 With MLX, PyTorch and the pinned source installed:

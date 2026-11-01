@@ -18,9 +18,9 @@ del original. `model_channels` debe ser igual a `num_heads * num_head_channels`.
 Una prueba de modelo pequeño mapea los 123 parámetros y buffers sintéticos de
 PyTorch, verifica cada forma y los carga estrictamente en MLX. Compara las
 salidas de latente y cámara para dos tamaños de lote y condición en CPU o Metal,
-con tolerancia `atol=2e-5, rtol=2e-4`. Este mapeo solo existe en la prueba;
-quedan sin validar la conversión automática de checkpoints, los esquemas por
-modelo, pesos entrenados, memoria a tamaño completo e inferencia integral. No
+con tolerancia `atol=2e-5, rtol=2e-4`. El [cargador preliminar](dit-checkpoints.md) proporciona este mapeo y validación
+estricta para safetensors FP32. Quedan sin validar pesos entrenados, precisión
+mixta, memoria a tamaño completo e inferencia integral. No
 subas pesos, entradas privadas ni credenciales.
 
 Con MLX, PyTorch y el código original fijado instalados:
