@@ -24,8 +24,10 @@ On an Apple M4 with 32 GB unified memory, macOS 27.2, MLX 0.32.3 and PyTorch
 The position embedding differs before the denoiser blocks. A separate frequency
 inspection found a maximum absolute frequency difference of 0.00390625 between
 PyTorch CPU and MLX Metal, with differences in 56 of 170 frequency values.
-This is a plausible contributor to position error, not proof that it is the only
-source. Disabling `MLX_ENABLE_TF32` did not change the observed GPU output errors
+Supplying the PyTorch-computed frequencies directly to MLX reduced maximum
+position error from 0.0312334 to 1.78814e-7 for this input. This isolates
+frequency calculation as the dominant cause of this positional discrepancy;
+it does not prove that all denoiser output differences are resolved. Disabling `MLX_ENABLE_TF32` did not change the observed GPU output errors
 in this case. Investigating and correcting numerical differences remains work;
 tolerances have not been increased to make the result pass.
 
@@ -42,7 +44,7 @@ PYTHONPATH=../idol-sdk-reference .venv-reference/bin/python -m scripts.validate_
 
 Use `--device cpu` for MLX CPU, and `--tokens` or `--context-tokens` to select
 reduced lengths. The JSON output contains only aggregate comparison metrics;
-exit 0 means all three comparisons pass, exit 1 means at least one comparison
+exit 0 means all four comparisons pass, exit 1 means at least one comparison
 fails. The tool loads the full model/checkpoint, so it needs sufficient memory.
 It does not write weights or inputs. The automated test uses a tiny synthetic
 checkpoint and runs in CI; trained weights are never needed in CI. This tool
