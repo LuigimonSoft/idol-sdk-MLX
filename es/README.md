@@ -28,6 +28,8 @@ indicada a continuación no realiza inferencia.
 - Un sampler Euler preliminar con guía classifier-free opcional y pruebas sintéticas.
 - Ruido MLX con semilla y comparaciones sintéticas de trayectoria por paso.
 - Decodificación MLX del latente de cámara a los campos compatibles con JSON del SDK original.
+- Red preliminar FP32 de probabilidades octree y mapeo estricto de checkpoints,
+  probados con pesos sintéticos; el diagnóstico reducido con checkpoint entrenado aún falla las tolerancias provisionales.
 - Un denoiser FP32 preliminar y carga estricta de checkpoints. Un diagnóstico
   reducido con pesos entrenados supera las tolerancias provisionales para varias entradas FP32.
 - Una herramienta preliminar de comparación de archivos con tolerancias explícitas.
@@ -84,6 +86,8 @@ el cumplimiento de sus licencias respectivas. Consulta
 imágenes privadas ni pesos al repositorio.
 
 ## Documentación
+
+- [Red de probabilidades octree](octree-network.md)
 
 - [Decodificación de cámara](camera-decoding.md)
 
