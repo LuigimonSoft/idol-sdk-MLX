@@ -35,7 +35,8 @@ batched arrays with equivalent per-item values. A zero pre-normalization
 quaternion remains zero as in the reference. Position offsets are not clamped;
 finite sigmoid outputs may saturate to 0 or 1. Inputs must be nonempty FP32 MLX
 arrays with compatible shapes; configuration biases and buffer shapes are
-validated. This function does not export PLY or rotate coordinates to y-up.
+validated. This function does not export PLY or rotate coordinates to y-up;
+use the separate [PLY exporter](gaussian-ply.md) for those steps.
 
 Synthetic tests compare all five attributes against PyTorch on CPU and Metal,
 including multiple batches, per-anchor counts, degenerate quaternions, SH color
