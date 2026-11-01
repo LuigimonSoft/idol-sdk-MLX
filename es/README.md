@@ -22,6 +22,7 @@ indicada a continuación no realiza inferencia.
 - Una política preliminar opcional de precisión y límites de evaluación explícitos.
 - Capas MLX de normalización, feed-forward y embeddings escalares, espaciales y rotatorios,
   con pruebas sintéticas frente a PyTorch.
+- Atención propia y cruzada preliminar del decodificador con pruebas sintéticas.
 - Una herramienta preliminar de comparación de archivos con tolerancias explícitas.
 - Capturas sintéticas y pruebas de algunos componentes originales, además de
   métricas preliminares de equivalencia numérica.
@@ -84,6 +85,7 @@ imágenes privadas ni pesos al repositorio.
 - [Embedding sinusoidal escalar](sinusoidal-embedding.md)
 - [Embeddings espaciales](spatial-embeddings.md)
 - [Rotación y RePo 3D](rotary-repo.md)
+- [Atención del decodificador](decoder-attention.md)
 - [Capturas sintéticas de referencia](reference-capture.md)
 - [Métricas y tolerancias provisionales](parity-metrics.md)
 - [Comparación de salidas entre backends](parity-harness.md)
