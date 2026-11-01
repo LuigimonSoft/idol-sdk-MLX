@@ -316,9 +316,11 @@ class RotaryParityTests(unittest.TestCase):
                     np.testing.assert_allclose(np.array(getattr(candidate, name)), source.detach().numpy(),
                                                rtol=1e-6, atol=1e-6)
                     setattr(candidate, name, mx.array(source.detach().numpy()))
-                values = np.linspace(-1, 1, 2 * 3 * channels, dtype=np.float32).reshape(2, 3, channels)
+                values = np.random.default_rng(2026).standard_normal((2, 3, channels)).astype(np.float32)
                 actual = candidate(mx.array(values))
                 expected = reference(torch.from_numpy(values)).detach().numpy()
+                per_token_difference = np.max(np.abs(expected[:, 1:] - expected[:, :-1]), axis=(2, 3, 4))
+                self.assertGreater(float(np.min(per_token_difference)), 1e-3)
                 mx.eval(actual)
                 self.assertEqual(tuple(actual.shape), tuple(expected.shape))
                 np.testing.assert_allclose(np.array(actual), expected, rtol=1e-4, atol=1e-5)
