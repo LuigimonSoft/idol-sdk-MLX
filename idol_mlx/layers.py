@@ -225,3 +225,28 @@ class RopeMultiHeadAttention(nn.Module):
         v = qkv[:, :, 2].transpose(0, 2, 1, 3)
         output = mx.fast.scaled_dot_product_attention(q, k, v, scale=self.head_dim ** -0.5)
         return self.out(output.transpose(0, 2, 1, 3).reshape(batch, length, channels))
+
+
+class UnifiedTransformerBlock(nn.Module):
+    """Denoiser/refiner transformer block with optional adaptive modulation."""
+
+    def __init__(self, channels, num_heads, mlp_ratio=4.0, modulation=True):
+        super().__init__()
+        self.modulation = modulation
+        self.norm1 = LayerNorm32(channels, elementwise_affine=not modulation, eps=1e-6)
+        self.norm2 = LayerNorm32(channels, elementwise_affine=not modulation, eps=1e-6)
+        self.attn = RopeMultiHeadAttention(channels, num_heads)
+        self.mlp = FeedForwardNet(channels, mlp_ratio)
+        if modulation:
+            self.shift_table = mx.zeros((1, 6 * channels))
+
+    def __call__(self, x, mod, rotary_emb):
+        if not self.modulation:
+            x = x + self.attn(self.norm1(x), rotary_emb)
+            return x + self.mlp(self.norm2(x))
+        mod = mod + self.shift_table.astype(mod.dtype)
+        shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = mx.split(mod, 6, axis=1)
+        h = self.norm1(x) * (1 + scale_msa[:, None, :]) + shift_msa[:, None, :]
+        x = x + self.attn(h, rotary_emb) * gate_msa[:, None, :]
+        h = self.norm2(x) * (1 + scale_mlp[:, None, :]) + shift_mlp[:, None, :]
+        return x + self.mlp(h) * gate_mlp[:, None, :]
