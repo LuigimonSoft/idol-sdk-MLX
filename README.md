@@ -24,6 +24,7 @@ below to perform inference.
   layers plus spatial and real-valued rotary embeddings with synthetic PyTorch parity checks.
 - Preliminary decoder self/cross-attention and denoiser rotary attention with
   synthetic parity checks.
+- A preliminary unified transformer block with synthetic FP32 parity checks.
 - A preliminary file-based parity comparison tool with explicit tolerances.
 - Synthetic reference captures and tests for selected upstream components,
   plus preliminary numerical parity metrics.
@@ -86,6 +87,7 @@ private images or model weights.
 - [Rotary and RePo 3D](docs/rotary-repo.md)
 - [Decoder attention](docs/decoder-attention.md)
 - [Denoiser rotary attention](docs/rotary-attention.md)
+- [Unified transformer block](docs/unified-transformer.md)
 - [Synthetic reference captures](docs/reference-capture.md)
 - [Parity metrics and provisional tolerances](docs/parity-metrics.md)
 - [Comparing backend outputs](docs/parity-harness.md)
