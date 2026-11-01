@@ -25,6 +25,7 @@ below to perform inference.
 - Preliminary decoder self/cross-attention and denoiser rotary attention with
   synthetic parity checks.
 - Preliminary unified and decoder transformer blocks with synthetic FP32 parity checks.
+- A preliminary unguided Euler sampler with synthetic parity checks.
 - A preliminary file-based parity comparison tool with explicit tolerances.
 - Synthetic reference captures and tests for selected upstream components,
   plus preliminary numerical parity metrics.
@@ -89,6 +90,7 @@ private images or model weights.
 - [Denoiser rotary attention](docs/rotary-attention.md)
 - [Unified transformer block](docs/unified-transformer.md)
 - [Decoder transformer blocks](docs/decoder-transformers.md)
+- [Euler flow sampler](docs/euler-sampler.md)
 - [Synthetic reference captures](docs/reference-capture.md)
 - [Parity metrics and provisional tolerances](docs/parity-metrics.md)
 - [Comparing backend outputs](docs/parity-harness.md)
