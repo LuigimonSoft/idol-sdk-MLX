@@ -7,7 +7,7 @@ path of the [pinned upstream octree decoder](https://github.com/speridlabs/idol-
 It accepts cell centers `[B, L, 3]`, level `[B]`, and conditioning features
 `[B, Lc, cond_channels]`, and returns logits `[B, L, 8]`. Apply
 `mx.softmax(logits, axis=-1)` for child probabilities. Sampling and variable-size
-octree traversal are not implemented here.
+octree traversal are implemented separately; see [anchor sampling](octree-traversal.md).
 
 `idol_mlx.octree_weights.load_octree_checkpoint` reads a trusted local
 upstream-named FP32 safetensors file. It checks the full source schema, target

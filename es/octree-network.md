@@ -7,7 +7,8 @@
 Recibe centros de celda `[B, L, 3]`, nivel `[B]` y características de condición
 `[B, Lc, cond_channels]`, y devuelve logits `[B, L, 8]`. Aplica
 `mx.softmax(logits, axis=-1)` para obtener las probabilidades de los hijos.
-El muestreo y recorrido de tamaño variable del octree no se implementan aquí.
+El muestreo y recorrido del octree se implementan por separado; consulta
+[muestreo de anclas](octree-traversal.md).
 
 `idol_mlx.octree_weights.load_octree_checkpoint` lee un archivo safetensors FP32
 local y confiable con los nombres originales. Comprueba el esquema completo de
