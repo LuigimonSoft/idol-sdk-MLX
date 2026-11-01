@@ -1,5 +1,7 @@
 """MLX ports of selected shared layers from the upstream Idol SDK."""
 
+import math
+
 import mlx.core as mx
 import mlx.nn as nn
 
@@ -56,3 +58,23 @@ class MLP(nn.Module):
 
     def __call__(self, x):
         return self.mlp(x)
+
+
+class SinusoidalEmbedder(nn.Module):
+    """Embed scalar time or octree level using upstream frequencies and SiLU."""
+
+    def __init__(self, hidden_size, frequency_embedding_size=256, max_period=10000, two_pi=False):
+        super().__init__()
+        self.mlp = nn.Sequential(nn.Linear(frequency_embedding_size, hidden_size), nn.silu,
+                                 nn.Linear(hidden_size, hidden_size))
+        self.frequency_embedding_size = frequency_embedding_size
+        self.max_period = max_period
+        self.two_pi = two_pi
+
+    def __call__(self, t):
+        half = self.frequency_embedding_size // 2
+        freqs = mx.exp(-math.log(self.max_period) * mx.arange(half, dtype=mx.float32) / half)
+        args = t[:, None].astype(mx.float32) * freqs[None, :]
+        if self.two_pi:
+            args = args * (2 * math.pi)
+        return self.mlp(mx.concatenate([mx.cos(args), mx.sin(args)], axis=-1))
