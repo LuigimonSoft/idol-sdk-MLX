@@ -29,7 +29,7 @@ below to perform inference.
 - Explicit seeded MLX noise generation and per-step synthetic trajectory checks.
 - MLX camera-latent decoding to the upstream JSON-compatible fields.
 - A preliminary FP32 octree probability network and strict checkpoint mapping,
-  tested against synthetic reference weights; the reduced trained-checkpoint diagnostic still fails provisional tolerances.
+  tested against synthetic reference weights and reduced trained-checkpoint scenarios.
 - A preliminary FP32 denoiser and strict checkpoint mapping. A reduced
   trained-weight diagnostic passes provisional tolerances for several reduced FP32 inputs.
 - A preliminary file-based parity comparison tool with explicit tolerances.

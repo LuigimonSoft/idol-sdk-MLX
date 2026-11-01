@@ -5,6 +5,7 @@ import math
 import mlx.core as mx
 import mlx.nn as nn
 
+from ._decoder_position_frequencies import CANONICAL_DECODER_POSITION_FREQUENCIES
 from ._position_frequencies import CANONICAL_POSITION_FREQUENCIES
 
 
@@ -121,8 +122,12 @@ class PcdAbsolutePositionEmbedderv2(nn.Module):
         self.max_res = max_res
 
     def __call__(self, x):
-        logs = mx.linspace(0.0, float(self.max_res), self.freq_dim, dtype=mx.float32)
-        frequencies = mx.power(2.0, logs).astype(x.dtype)
+        if self.freq_dim == 170 and self.max_res == 10:
+            frequencies = mx.array(CANONICAL_DECODER_POSITION_FREQUENCIES, dtype=mx.float32)
+        else:
+            logs = mx.linspace(0.0, float(self.max_res), self.freq_dim, dtype=mx.float32)
+            frequencies = mx.power(2.0, logs)
+        frequencies = frequencies.astype(x.dtype)
         product = mx.expand_dims(x, -1) * frequencies
         # PyTorch applies the scalar in FP32 before rounding a reduced-precision result.
         if x.dtype in (mx.float16, mx.bfloat16):
