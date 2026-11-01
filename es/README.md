@@ -26,6 +26,7 @@ indicada a continuación no realiza inferencia.
   del denoiser, con pruebas sintéticas.
 - Bloques transformer preliminares unificado y del decodificador con pruebas sintéticas FP32.
 - Un sampler Euler preliminar con guía classifier-free opcional y pruebas sintéticas.
+- Generación explícita de ruido MLX con semilla para muestreo sintético reproducible.
 - Una herramienta preliminar de comparación de archivos con tolerancias explícitas.
 - Capturas sintéticas y pruebas de algunos componentes originales, además de
   métricas preliminares de equivalencia numérica.
@@ -93,6 +94,7 @@ imágenes privadas ni pesos al repositorio.
 - [Bloque transformer unificado](unified-transformer.md)
 - [Bloques transformer del decodificador](decoder-transformers.md)
 - [Sampler Euler](euler-sampler.md)
+- [Ruido con semilla y reproducibilidad](reproducibility.md)
 - [Capturas sintéticas de referencia](reference-capture.md)
 - [Métricas y tolerancias provisionales](parity-metrics.md)
 - [Comparación de salidas entre backends](parity-harness.md)
